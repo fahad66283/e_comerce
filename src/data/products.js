@@ -164,3 +164,20 @@ export const SHIPPING_FEE = 250;
 export function getShipping(subtotal) {
   return subtotal === 0 || subtotal >= FREE_SHIPPING_MIN ? 0 : SHIPPING_FEE;
 }
+
+// Background gradients the admin can pick for a product's placeholder image.
+// Kept as full class names so Tailwind includes them in the CSS.
+export const colorOptions = [
+  { label: "Purple", value: "from-indigo-400 to-purple-500" },
+  { label: "Blue", value: "from-sky-400 to-blue-600" },
+  { label: "Teal", value: "from-emerald-400 to-teal-600" },
+  { label: "Pink", value: "from-rose-400 to-pink-600" },
+  { label: "Orange", value: "from-orange-400 to-red-500" },
+  { label: "Indigo", value: "from-blue-400 to-indigo-600" },
+  { label: "Amber", value: "from-amber-400 to-orange-600" },
+  { label: "Yellow", value: "from-yellow-300 to-amber-500" },
+  { label: "Green", value: "from-lime-400 to-green-600" },
+  { label: "Stone", value: "from-stone-400 to-stone-600" },
+  { label: "Gray", value: "from-slate-500 to-gray-800" },
+  { label: "Cyan", value: "from-cyan-400 to-sky-600" },
+];

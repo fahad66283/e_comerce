@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { categories, products } from "@/data/products";
-import ProductCard from "@/components/ProductCard";
+import { categories } from "@/data/products";
+import FeaturedProducts from "@/components/FeaturedProducts";
 
 const features = [
   { icon: "🚚", title: "Free Shipping", text: "On orders over Rs. 5,000" },
@@ -9,8 +9,6 @@ const features = [
 ];
 
 export default function Home() {
-  const featured = products.filter((p) => p.featured);
-
   return (
     <>
       <section className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
@@ -69,11 +67,7 @@ export default function Home() {
             View all →
           </Link>
         </div>
-        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {featured.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        <FeaturedProducts />
       </section>
     </>
   );

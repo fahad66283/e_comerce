@@ -13,13 +13,14 @@ export default function Footer() {
           <ul className="mt-2 space-y-1 text-sm">
             <li><Link href="/products" className="hover:text-white">All Products</Link></li>
             <li><Link href="/cart" className="hover:text-white">Cart</Link></li>
-            <li><Link href="/checkout" className="hover:text-white">Checkout</Link></li>
+            <li><Link href="/about" className="hover:text-white">About Us</Link></li>
+            <li><Link href="/contact" className="hover:text-white">Contact Us</Link></li>
           </ul>
         </div>
         <div>
           <h4 className="font-semibold text-white">Contact</h4>
           <ul className="mt-2 space-y-1 text-sm">
-            <li>support@shopease.example</li>
+            <li>Kamisofts@gmail.com</li>
             <li>Mon – Sat, 9am – 6pm</li>
           </ul>
         </div>

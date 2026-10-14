@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { categories, products } from "@/data/products";
+import { categories } from "@/data/products";
+import { useProducts } from "@/context/ProductsContext";
 import ProductCard from "./ProductCard";
 
 export default function ProductList() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { products } = useProducts();
   const param = searchParams.get("category");
   const category = categories.includes(param) ? param : "All";
 

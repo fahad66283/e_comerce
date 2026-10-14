@@ -20,7 +20,7 @@ export default function ProductCard({ product }) {
       <div className="mt-1 text-sm text-amber-500">★ {product.rating}</div>
       <div className="mt-auto flex items-center justify-between pt-4">
         <span className="text-lg font-bold text-gray-900">{formatPrice(product.price)}</span>
-        <AddToCartButton productId={product.id} className="text-sm" />
+        <AddToCartButton productId={product.id} disabled={product.stock < 1} className="text-sm" />
       </div>
     </div>
   );
