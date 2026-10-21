@@ -20,7 +20,14 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${tajawal.variable} h-full antialiased`}>
+    // suppressHydrationWarning: browser extensions (Grammarly, Dark Reader, translators...)
+    // often add attributes to <html> before React loads. Only affects this one element.
+    <html
+      lang="en"
+      className={`${tajawal.variable} h-full antialiased`}
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
       <body className="flex min-h-full flex-col font-sans">
         <AuthProvider>
           <ProductsProvider>

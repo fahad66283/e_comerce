@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getProduct, products } from "@/data/products";
 import ProductDetail from "@/components/ProductDetail";
 
@@ -12,7 +13,13 @@ export async function generateMetadata({ params }) {
   return { title: product ? `${product.name} – HAK Store` : "Product – HAK Store" };
 }
 
-export default async function ProductPage({ params }) {
-  const { id } = await params;
-  return <ProductDetail id={id} />;
+// params are read inside <Suspense> so ids that weren't prerendered can stream in.
+export default function ProductPage({ params }) {
+  return (
+    <Suspense fallback={<p className="container-page py-16 text-grey-500">Loading...</p>}>
+      {params.then(({ id }) => (
+        <ProductDetail id={id} />
+      ))}
+    </Suspense>
+  );
 }
