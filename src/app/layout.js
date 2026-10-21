@@ -2,6 +2,7 @@ import { Tajawal } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
+import { OrdersProvider } from "@/context/OrdersContext";
 import { ProductsProvider } from "@/context/ProductsContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -32,9 +33,11 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <ProductsProvider>
             <CartProvider>
-              <Navbar />
-              <main className="flex-1">{children}</main>
-              <Footer />
+              <OrdersProvider>
+                <Navbar />
+                <main className="flex-1">{children}</main>
+                <Footer />
+              </OrdersProvider>
             </CartProvider>
           </ProductsProvider>
         </AuthProvider>

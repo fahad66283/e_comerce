@@ -41,13 +41,31 @@ export function ProductsProvider({ children }) {
     productsStore.set((prev) => prev.filter((p) => p.id !== id));
   }
 
+  // Called when an order is placed: [{ id, quantity }]
+  function reduceStock(items) {
+    productsStore.set((prev) =>
+      prev.map((p) => {
+        const item = items.find((i) => i.id === p.id);
+        return item ? { ...p, stock: Math.max(0, p.stock - item.quantity) } : p;
+      })
+    );
+  }
+
   function resetProducts() {
     productsStore.reset();
   }
 
   return (
     <ProductsContext.Provider
-      value={{ products, getProduct, addProduct, updateProduct, deleteProduct, resetProducts }}
+      value={{
+        products,
+        getProduct,
+        addProduct,
+        updateProduct,
+        deleteProduct,
+        reduceStock,
+        resetProducts,
+      }}
     >
       {children}
     </ProductsContext.Provider>

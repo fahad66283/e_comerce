@@ -1,9 +1,9 @@
 import AdminDashboard from "@/components/AdminDashboard";
 
 export const metadata = {
-  title: "Admin – HAK Store",
+  title: "Dashboard – HAK Store",
 };
 
-export default function AdminPage() {
+export default function DashboardPage() {
   return <AdminDashboard />;
 }

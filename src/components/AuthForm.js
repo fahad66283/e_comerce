@@ -1,16 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 
+// Only allow redirects to pages on this site (e.g. "/account"), never other websites.
+function safeNext(value) {
+  return value && value.startsWith("/") && !value.startsWith("//") ? value : null;
+}
+
 export default function AuthForm({ mode }) {
-  const isRegister = mode === "register";
+  const isSignup = mode === "signup";
   const { user, login, register, logout } = useAuth();
   const router = useRouter();
+  const next = safeNext(useSearchParams().get("next"));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const homeFor = (u) => (u.role === "admin" ? "/dashboard" : "/account");
+  const switchHref = (isSignup ? "/login" : "/signup") + (next ? `?next=${encodeURIComponent(next)}` : "");
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -18,13 +27,13 @@ export default function AuthForm({ mode }) {
     const email = form.get("email");
     const password = form.get("password");
 
-    if (isRegister && password !== form.get("confirm")) {
+    if (isSignup && password !== form.get("confirm")) {
       setError("Passwords do not match.");
       return;
     }
 
     setBusy(true);
-    const result = isRegister
+    const result = isSignup
       ? await register(form.get("name"), email, password)
       : await login(email, password);
     setBusy(false);
@@ -33,7 +42,7 @@ export default function AuthForm({ mode }) {
       setError(result.error);
       return;
     }
-    router.push(result.user.role === "admin" ? "/admin" : "/products");
+    router.push(next ?? homeFor(result.user));
   }
 
   if (user) {
@@ -43,8 +52,8 @@ export default function AuthForm({ mode }) {
         <h1 className="section-title mt-4">You&apos;re logged in as {user.name}</h1>
         <p className="mt-1 text-grey-500">{user.email}</p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href={user.role === "admin" ? "/admin" : "/products"} className="btn btn-primary">
-            {user.role === "admin" ? "Go to Admin" : "Continue Shopping"}
+          <Link href={homeFor(user)} className="btn btn-primary">
+            {user.role === "admin" ? "Go to Dashboard" : "My Account"}
           </Link>
           <button type="button" onClick={logout} className="btn btn-outline">
             Logout
@@ -58,13 +67,11 @@ export default function AuthForm({ mode }) {
     <div className="mx-auto max-w-md px-6 py-16">
       <form onSubmit={handleSubmit} className="panel">
         <div className="text-center">
-          <span className="eyebrow">{isRegister ? "Register" : "Login"}</span>
+          <span className="eyebrow">{isSignup ? "Sign Up" : "Login"}</span>
         </div>
-        <h1 className="section-title text-center">
-          {isRegister ? "Create an account" : "Welcome back"}
-        </h1>
+        <h1 className="section-title text-center">{isSignup ? "Create an account" : "Welcome back"}</h1>
         <p className="mt-1 text-center text-sm text-grey-500">
-          {isRegister ? "Register to start shopping" : "Login to your account"}
+          {isSignup ? "Sign up to track your orders" : "Login to your account"}
         </p>
 
         {error && (
@@ -74,7 +81,7 @@ export default function AuthForm({ mode }) {
         )}
 
         <div className="mt-6 space-y-4">
-          {isRegister && (
+          {isSignup && (
             <label className="block">
               <span className="field-label">Full Name</span>
               <input required name="name" autoComplete="name" className="field-input" />
@@ -90,40 +97,35 @@ export default function AuthForm({ mode }) {
               required
               type="password"
               name="password"
-              minLength={isRegister ? 6 : undefined}
-              autoComplete={isRegister ? "new-password" : "current-password"}
+              minLength={isSignup ? 6 : undefined}
+              autoComplete={isSignup ? "new-password" : "current-password"}
               className="field-input"
             />
           </label>
-          {isRegister && (
+          {isSignup && (
             <label className="block">
               <span className="field-label">Confirm Password</span>
-              <input
-                required
-                type="password"
-                name="confirm"
-                autoComplete="new-password"
-                className="field-input"
-              />
+              <input required type="password" name="confirm" autoComplete="new-password" className="field-input" />
             </label>
           )}
         </div>
 
-        <button
-          type="submit"
-          disabled={busy}
-          className="btn btn-primary mt-6 w-full"
-        >
-          {busy ? "Please wait..." : isRegister ? "Register" : "Login"}
+        {isSignup && (
+          <p className="mt-4 text-xs text-grey-500">
+            By signing up you agree to our{" "}
+            <Link href="/terms" className="font-bold text-ink underline">Terms &amp; Conditions</Link> and{" "}
+            <Link href="/privacy-policy" className="font-bold text-ink underline">Privacy Policy</Link>.
+          </p>
+        )}
+
+        <button type="submit" disabled={busy} className="btn btn-primary mt-6 w-full">
+          {busy ? "Please wait..." : isSignup ? "Sign Up" : "Login"}
         </button>
 
         <p className="mt-6 text-center text-sm text-grey-500">
-          {isRegister ? "Already have an account? " : "Don't have an account? "}
-          <Link
-            href={isRegister ? "/login" : "/register"}
-            className="font-extrabold text-brand-700 hover:underline"
-          >
-            {isRegister ? "Login" : "Register"}
+          {isSignup ? "Already have an account? " : "Don't have an account? "}
+          <Link href={switchHref} className="font-extrabold text-brand-700 hover:underline">
+            {isSignup ? "Login" : "Sign Up"}
           </Link>
         </p>
       </form>

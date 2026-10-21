@@ -1,8 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { useOrders } from "@/context/OrdersContext";
+import { useProducts } from "@/context/ProductsContext";
+import { getShipping } from "@/data/products";
 import OrderSummary from "@/components/OrderSummary";
 
 const fields = [
@@ -19,38 +24,47 @@ const paymentOptions = [
 ];
 
 export default function CheckoutPage() {
-  const { items, loaded, clearCart } = useCart();
-  const [orderId, setOrderId] = useState(null);
+  const { items, subtotal, loaded, clearCart } = useCart();
+  const { user } = useAuth();
+  const { placeOrder } = useOrders();
+  const { reduceStock } = useProducts();
+  const router = useRouter();
+  const [placing, setPlacing] = useState(false);
 
   function handleSubmit(e) {
     e.preventDefault();
-    // Static demo: no backend yet, so just generate an order number and clear the cart.
-    setOrderId(`#HAK-${Date.now().toString().slice(-6)}`);
+    const form = new FormData(e.target);
+    const shipping = getShipping(subtotal);
+    // Static demo: the order is saved in this browser only, no payment is taken.
+    const id = placeOrder({
+      items: items.map(({ id, quantity, product }) => ({
+        id,
+        quantity,
+        name: product.name,
+        price: product.price,
+        emoji: product.emoji,
+      })),
+      subtotal,
+      shipping,
+      total: subtotal + shipping,
+      payment: "Cash on Delivery",
+      notes: form.get("notes"),
+      customer: {
+        name: form.get("fullName"),
+        phone: form.get("phone"),
+        email: form.get("email"),
+        city: form.get("city"),
+        address: form.get("address"),
+      },
+    });
+    reduceStock(items);
+    setPlacing(true);
     clearCart();
+    router.push(`/order-confirmation?id=${id}`);
   }
 
-  if (orderId) {
-    return (
-      <div className="mx-auto max-w-[500px] px-6 py-16 text-center">
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-brand-100">
-          <svg viewBox="0 0 24 24" fill="none" className="h-[38px] w-[38px]" aria-hidden="true">
-            <path d="M5 13l4 4L19 7" stroke="#3F8C2E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-        <h1 className="section-title">Your order has been received!</h1>
-        <p className="mt-2.5 text-grey-500">
-          Thank you for shopping at HAK Store. This is a demo store, so no real order was placed.
-        </p>
-        <div className="my-4 inline-block rounded-full border-[1.5px] border-grey-200 bg-grey-100 px-[22px] py-2.5 font-extrabold tracking-wide">
-          {orderId}
-        </div>
-        <div>
-          <Link href="/products" className="btn btn-primary">
-            Continue Shopping
-          </Link>
-        </div>
-      </div>
-    );
+  if (placing) {
+    return <p className="container-page py-16 text-grey-500">Placing your order...</p>;
   }
 
   if (!loaded) {
@@ -78,7 +92,18 @@ export default function CheckoutPage() {
       <form onSubmit={handleSubmit} className="grid items-start gap-9 lg:grid-cols-[1fr_370px]">
         <div className="grid gap-5">
           <section className="panel">
-            <h3 className="mb-4 text-[1.05rem]">Delivery Information</h3>
+            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+              <h3 className="text-[1.05rem]">Delivery Information</h3>
+              {!user && (
+                <p className="text-sm text-grey-500">
+                  Have an account?{" "}
+                  <Link href="/login?next=/checkout" className="font-extrabold text-brand-700 hover:underline">
+                    Login
+                  </Link>{" "}
+                  to track your order.
+                </p>
+              )}
+            </div>
             <div className="grid gap-x-3.5 gap-y-4 sm:grid-cols-2">
               {fields.map((f) => (
                 <label key={f.name} className={f.wide ? "sm:col-span-2" : ""}>
@@ -88,6 +113,7 @@ export default function CheckoutPage() {
                     name={f.name}
                     type={f.type}
                     autoComplete={f.autoComplete}
+                    defaultValue={f.name === "fullName" ? user?.name : f.name === "email" ? user?.email : undefined}
                     className="field-input"
                   />
                 </label>
@@ -132,6 +158,11 @@ export default function CheckoutPage() {
           <button type="submit" className="btn btn-primary mt-[18px] w-full">
             Place Order
           </button>
+          <p className="mt-3 text-center text-xs text-grey-400">
+            By placing your order you agree to our{" "}
+            <Link href="/terms" className="underline hover:text-white">Terms</Link> and{" "}
+            <Link href="/return-policy" className="underline hover:text-white">Return Policy</Link>.
+          </p>
         </OrderSummary>
       </form>
     </div>

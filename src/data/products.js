@@ -1,6 +1,13 @@
 // Static product catalog. Replace with a database or API later.
 export const categories = ["All", "Electronics", "Fashion", "Home", "Accessories"];
 
+export const categoryInfo = {
+  Electronics: { icon: "🎧", description: "Headphones, smart watches, speakers and more." },
+  Fashion: { icon: "👕", description: "Everyday clothing and shoes for every style." },
+  Home: { icon: "🪴", description: "Lamps, mugs, plants and décor for your space." },
+  Accessories: { icon: "👜", description: "Wallets, bags, sunglasses and finishing touches." },
+};
+
 export const products = [
   {
     id: "wireless-headphones",

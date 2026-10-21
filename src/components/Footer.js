@@ -6,8 +6,8 @@ const columns = [
     title: "Shop",
     links: [
       { href: "/products", label: "All Products" },
+      { href: "/categories", label: "Categories" },
       { href: "/cart", label: "Cart" },
-      { href: "/checkout", label: "Checkout" },
     ],
   },
   {
@@ -15,13 +15,23 @@ const columns = [
     links: [
       { href: "/about", label: "About Us" },
       { href: "/contact", label: "Contact Us" },
+      { href: "/faqs", label: "FAQs" },
+    ],
+  },
+  {
+    title: "Policies",
+    links: [
+      { href: "/return-policy", label: "Return Policy" },
+      { href: "/privacy-policy", label: "Privacy Policy" },
+      { href: "/terms", label: "Terms & Conditions" },
     ],
   },
   {
     title: "Account",
     links: [
+      { href: "/account", label: "My Account" },
       { href: "/login", label: "Login" },
-      { href: "/register", label: "Register" },
+      { href: "/signup", label: "Sign Up" },
     ],
   },
 ];
@@ -30,7 +40,7 @@ export default function Footer() {
   return (
     <footer className="mt-16 bg-ink pt-[52px] text-[#C9CCC8]">
       <div className="container-page">
-        <div className="grid gap-9 border-b border-[#262626] pb-9 text-center md:grid-cols-2 md:text-left lg:grid-cols-[1.3fr_1fr_1fr_1fr]">
+        <div className="grid gap-9 border-b border-[#262626] pb-9 text-center md:grid-cols-2 md:text-left lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
           <div className="flex flex-col items-center md:items-start">
             <Logo light className="h-8" />
             <p className="mt-3 max-w-[270px] text-[0.88rem] text-[#8C9088]">

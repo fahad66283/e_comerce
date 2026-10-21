@@ -26,6 +26,7 @@ async function hashPassword(password) {
 
 export function AuthProvider({ children }) {
   const user = sessionStore.useValue();
+  const accounts = usersStore.useValue();
   const hydrated = useHydrated();
 
   async function login(email, password) {
@@ -66,13 +67,16 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Registered customers (without password hashes), for the admin dashboard.
+  const customers = accounts.map(({ name, email }) => ({ name, email }));
+
   function logout() {
     sessionStore.set(null);
   }
 
   return (
     <AuthContext.Provider
-      value={{ user, isAdmin: user?.role === "admin", hydrated, login, register, logout }}
+      value={{ user, isAdmin: user?.role === "admin", hydrated, customers, login, register, logout }}
     >
       {children}
     </AuthContext.Provider>

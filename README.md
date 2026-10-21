@@ -9,26 +9,49 @@ A static e-commerce web application built with **React**, **Next.js** (App Route
 - Logo files: `public/logo.svg` (light backgrounds), `public/logo-light.svg` (dark backgrounds) and
   `src/app/icon.svg` (browser tab icon), all converted from `HAK_logo.pdf`.
 
+## Pages
+
+| Page | Route |
+| --- | --- |
+| Home | `/` |
+| Shop (filter, search, sort) | `/products` |
+| Categories | `/categories` |
+| Product details | `/products/[id]` |
+| Cart | `/cart` |
+| Checkout | `/checkout` |
+| Order confirmation | `/order-confirmation?id=...` |
+| Login / Sign up | `/login`, `/signup` |
+| My Account (profile + order history) | `/account` |
+| Admin Dashboard (overview, orders, products, customers) | `/dashboard` |
+| About Us / Contact Us | `/about`, `/contact` |
+| FAQs | `/faqs` |
+| Privacy Policy / Terms & Conditions | `/privacy-policy`, `/terms` |
+| Return Policy | `/return-policy` |
+
+Old addresses `/admin` and `/register` redirect to `/dashboard` and `/signup`.
+
 ## Features
 
-- Home page with hero, category tiles, popular products, new arrivals, promos and newsletter sign-up
-- Shop page with category filter, search (also from the header search box) and sorting
-- Product detail pages (statically generated) with quantity selector and related products
-- Shopping cart saved in the browser (`localStorage`), with quantity controls and free-shipping logic
-- Checkout form with Cash on Delivery (demo order confirmation, no backend yet)
-- About Us and Contact Us pages (contact form is a demo, messages are not sent yet)
-- Login and registration for customers
-- Admin dashboard (`/admin`) to add, edit and delete product listings
+- Cart saved in the browser, with free-shipping logic (free over Rs. 5,000, otherwise Rs. 250)
+- Checkout saves the order, reduces product stock and opens an order confirmation page
+- Customers can sign up, log in and see their orders (including guest orders with the same email)
+- Admin dashboard: sales overview, low-stock list, order status updates (Processing, Shipped,
+  Delivered, Cancelled), product management and a customer list
+- Contact form and newsletter sign-up are demos (nothing is sent yet)
 - Responsive layout with mobile menu
+
+> The policy pages (privacy, terms, returns) are starting templates. Review them, ideally with a
+> legal advisor, before launching.
 
 ## Admin Account
 
-Login at `/login` with the admin email `kamisofts@gmail.com` to open the Admin Dashboard.
+Login at `/login` with the admin email `kamisofts@gmail.com` to open the Dashboard (`/dashboard`).
 Only a SHA-256 hash of the admin password is stored in the code (`src/context/AuthContext.js`).
 
-> **Important – demo only.** There is no backend yet, so accounts, the login session and admin
+> **Important – demo only.** There is no backend yet, so accounts, the login session, orders and admin
 > product changes are all saved in the browser's `localStorage`:
-> - Admin changes are only visible in the browser where they were made, not to other visitors.
+> - Data is only visible in the browser where it was created. For example, the admin only sees orders
+>   placed in their own browser, and product changes are not seen by other visitors.
 > - The admin check runs in the browser, so a technical user could bypass it.
 >
 > Before going live, move products, users and login to a server with a database.
@@ -64,13 +87,18 @@ src/
 │   ├── about/page.js         # About Us
 │   ├── contact/page.js       # Contact Us
 │   ├── login/page.js         # Login
-│   ├── register/page.js      # Registration
-│   ├── admin/page.js         # Admin dashboard (manage products)
+│   ├── signup/page.js        # Sign up
+│   ├── dashboard/page.js     # Admin dashboard
+│   ├── account/page.js       # My Account
+│   ├── categories/page.js    # Categories
+│   ├── order-confirmation/   # Order confirmation
+│   ├── faqs/, privacy-policy/, terms/, return-policy/
 │   └── not-found.js          # 404 page
 ├── components/               # Navbar, Footer, ProductCard, AdminDashboard, ...
 ├── context/
 │   ├── AuthContext.js        # Login, registration, admin check
 │   ├── CartContext.js        # Cart state
+│   ├── OrdersContext.js      # Orders
 │   └── ProductsContext.js    # Product listings (editable by admin)
 ├── lib/localStore.js         # localStorage-backed store helper
 └── data/products.js          # Default product catalog
