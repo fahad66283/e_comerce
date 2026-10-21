@@ -22,6 +22,12 @@ export default function OrderItems({ order }) {
           <dt>Subtotal</dt>
           <dd>{formatPrice(order.subtotal)}</dd>
         </div>
+        {order.discount > 0 && (
+          <div className="flex justify-between py-1 text-brand-700">
+            <dt>Discount{order.couponCode && ` (${order.couponCode})`}</dt>
+            <dd>−{formatPrice(order.discount)}</dd>
+          </div>
+        )}
         <div className="flex justify-between py-1 text-grey-500">
           <dt>Shipping</dt>
           <dd>{order.shipping === 0 ? "Free" : formatPrice(order.shipping)}</dd>

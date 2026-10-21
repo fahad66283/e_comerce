@@ -3,13 +3,20 @@
 import { useProducts } from "@/context/ProductsContext";
 import ProductCard from "./ProductCard";
 
-// mode "featured": products marked featured; "new": the most recently added ones.
+// mode "featured": products marked featured; "new": products marked new (or the latest added);
+// "sale": products with a discount.
 export default function FeaturedProducts({ mode = "featured", limit = 8 }) {
   const { products } = useProducts();
-  const list =
+  const marked = products.filter((p) => p.isNew);
+  const list = (
     mode === "new"
-      ? products.slice(-limit).reverse()
-      : products.filter((p) => p.featured).slice(0, limit);
+      ? marked.length > 0
+        ? [...marked].reverse()
+        : products.slice(-limit).reverse()
+      : mode === "sale"
+        ? products.filter((p) => p.compareAt > p.price)
+        : products.filter((p) => p.featured)
+  ).slice(0, limit);
 
   if (list.length === 0) {
     return <p className="text-grey-500">No products to show yet.</p>;

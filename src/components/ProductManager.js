@@ -2,13 +2,41 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useProducts } from "@/context/ProductsContext";
+import { LOW_STOCK, useProducts } from "@/context/ProductsContext";
+import { matchesSearch } from "@/lib/search";
 import { formatPrice } from "@/data/products";
 import ProductForm from "./ProductForm";
 
+const filters = [
+  { key: "all", label: "All", test: () => true },
+  { key: "low", label: "Low stock", test: (p) => p.stock > 0 && p.stock <= LOW_STOCK },
+  { key: "out", label: "Out of stock", test: (p) => p.stock < 1 },
+  { key: "featured", label: "Featured", test: (p) => p.featured },
+  { key: "new", label: "New", test: (p) => p.isNew },
+  { key: "sale", label: "On sale", test: (p) => p.compareAt > p.price },
+];
+
+// Small on/off switch used for the Featured and New flags.
+function Toggle({ on, label, onClick }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={!!on}
+      aria-label={label}
+      onClick={onClick}
+      className={`relative h-6 w-11 rounded-full transition ${on ? "bg-brand-500" : "bg-grey-200"}`}
+    >
+      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${on ? "left-[22px]" : "left-0.5"}`} />
+    </button>
+  );
+}
+
 // Products tab of the dashboard: add, edit, delete and reset listings.
 export default function ProductManager() {
-  const { products, addProduct, updateProduct, deleteProduct, resetProducts } = useProducts();
+  const { products, categories, addProduct, updateProduct, deleteProduct, resetProducts } = useProducts();
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
   // null = no form, "new" = adding, otherwise the product being edited
   const [editing, setEditing] = useState(null);
   const [message, setMessage] = useState("");
@@ -38,6 +66,8 @@ export default function ProductManager() {
     setMessage("Products were reset to the original list.");
   }
 
+  const activeFilter = filters.find((f) => f.key === filter);
+  const shown = products.filter((p) => activeFilter.test(p) && matchesSearch(p, search));
   const totalStock = products.reduce((sum, p) => sum + p.stock, 0);
   const outOfStock = products.filter((p) => p.stock < 1).length;
 
@@ -49,7 +79,13 @@ export default function ProductManager() {
           <button type="button" onClick={handleReset} className="btn btn-outline btn-sm">
             Reset to Default
           </button>
-          <button type="button" onClick={() => setEditing("new")} className="btn btn-primary btn-sm">
+          <button
+            type="button"
+            onClick={() => setEditing("new")}
+            disabled={categories.length === 0}
+            title={categories.length === 0 ? "Add a category first" : undefined}
+            className="btn btn-primary btn-sm"
+          >
             + Add Product
           </button>
         </div>
@@ -85,8 +121,31 @@ export default function ProductManager() {
         </div>
       )}
 
-      <div className="card mt-6 overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left text-sm">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search products..."
+          aria-label="Search products"
+          className="w-full rounded-full border-[1.5px] border-grey-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-ink sm:w-64"
+        />
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+          {filters.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setFilter(f.key)}
+              className={`pill !px-3.5 !py-1.5 !text-xs ${filter === f.key ? "pill-active" : ""}`}
+            >
+              {f.label} ({products.filter(f.test).length})
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="card mt-4 overflow-x-auto">
+        <table className="w-full min-w-[780px] text-left text-sm">
           <thead className="border-b border-grey-200 bg-grey-50 text-grey-500">
             <tr>
               <th className="px-4 py-3 font-medium">Product</th>
@@ -94,11 +153,12 @@ export default function ProductManager() {
               <th className="px-4 py-3 font-medium">Price</th>
               <th className="px-4 py-3 font-medium">Stock</th>
               <th className="px-4 py-3 font-medium">Featured</th>
+              <th className="px-4 py-3 font-medium">New</th>
               <th className="px-4 py-3 text-right font-medium">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-grey-200">
-            {products.map((p) => (
+            {shown.map((p) => (
               <tr key={p.id} className="hover:bg-grey-50">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
@@ -111,11 +171,29 @@ export default function ProductManager() {
                   </div>
                 </td>
                 <td className="px-4 py-3 text-grey-500">{p.category}</td>
-                <td className="px-4 py-3">{formatPrice(p.price)}</td>
-                <td className={`px-4 py-3 ${p.stock < 1 ? "font-medium text-red-600" : ""}`}>
-                  {p.stock < 1 ? "Out of stock" : p.stock}
+                <td className="whitespace-nowrap px-4 py-3">
+                  {formatPrice(p.price)}
+                  {p.compareAt > p.price && (
+                    <span className="ml-1.5 text-xs text-grey-400 line-through">{formatPrice(p.compareAt)}</span>
+                  )}
                 </td>
-                <td className="px-4 py-3">{p.featured ? "⭐ Yes" : "—"}</td>
+                <td className="whitespace-nowrap px-4 py-3">
+                  {p.stock < 1 ? (
+                    <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-extrabold text-red-700">Out of stock</span>
+                  ) : p.stock <= LOW_STOCK ? (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-extrabold text-amber-800">
+                      Low · {p.stock}
+                    </span>
+                  ) : (
+                    p.stock
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  <Toggle on={p.featured} label={`Featured: ${p.name}`} onClick={() => updateProduct(p.id, { ...p, featured: !p.featured })} />
+                </td>
+                <td className="px-4 py-3">
+                  <Toggle on={p.isNew} label={`New arrival: ${p.name}`} onClick={() => updateProduct(p.id, { ...p, isNew: !p.isNew })} />
+                </td>
                 <td className="px-4 py-3 text-right">
                   <button
                     type="button"
@@ -139,8 +217,10 @@ export default function ProductManager() {
             ))}
           </tbody>
         </table>
-        {products.length === 0 && (
-          <p className="px-4 py-10 text-center text-grey-500">No products. Add one to get started.</p>
+        {shown.length === 0 && (
+          <p className="px-4 py-10 text-center text-grey-500">
+            {products.length === 0 ? "No products. Add one to get started." : "No products match this filter."}
+          </p>
         )}
       </div>
     </div>

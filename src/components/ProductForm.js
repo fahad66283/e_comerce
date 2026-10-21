@@ -1,22 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { categories } from "@/data/products";
+import { useProducts } from "@/context/ProductsContext";
 import ProductImage from "./ProductImage";
 
 const emptyProduct = {
   name: "",
   price: "",
-  category: categories[1],
+  compareAt: "",
+  category: "",
   emoji: "📦",
   rating: 4.5,
   stock: 10,
   featured: false,
+  isNew: true,
   description: "",
 };
 
 export default function ProductForm({ product, onSave, onCancel }) {
-  const [form, setForm] = useState(product ?? emptyProduct);
+  const { categories } = useProducts();
+  const [form, setForm] = useState(
+    product
+      ? { ...emptyProduct, ...product, compareAt: product.compareAt ?? "" }
+      : { ...emptyProduct, category: categories[0]?.name ?? "" }
+  );
+  const [error, setError] = useState("");
 
   function update(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -24,12 +32,19 @@ export default function ProductForm({ product, onSave, onCancel }) {
 
   function handleSubmit(e) {
     e.preventDefault();
+    const price = Number(form.price);
+    const compareAt = form.compareAt === "" ? null : Number(form.compareAt);
+    if (compareAt !== null && compareAt <= price) {
+      setError("The original price must be higher than the sale price, or left empty.");
+      return;
+    }
     onSave({
       ...form,
       name: form.name.trim(),
       emoji: form.emoji.trim() || "📦",
       description: form.description.trim(),
-      price: Number(form.price),
+      price,
+      compareAt,
       rating: Number(form.rating),
       stock: Number(form.stock),
     });
@@ -63,6 +78,18 @@ export default function ProductForm({ product, onSave, onCancel }) {
             />
           </label>
           <label>
+            <span className="field-label">Original Price (optional, for sales)</span>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={form.compareAt}
+              onChange={(e) => update("compareAt", e.target.value)}
+              placeholder="e.g. 5999"
+              className="field-input"
+            />
+          </label>
+          <label>
             <span className="field-label">Stock</span>
             <input
               required
@@ -81,15 +108,15 @@ export default function ProductForm({ product, onSave, onCancel }) {
               onChange={(e) => update("category", e.target.value)}
               className="field-input"
             >
-              {categories
-                .filter((c) => c !== "All")
-                .map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
+              {categories.map((c) => (
+                <option key={c.name} value={c.name}>
+                  {c.icon} {c.name}
+                </option>
+              ))}
             </select>
           </label>
           <label>
-            <span className="field-label">Rating (0–5)</span>
+            <span className="field-label">Starting Rating (0–5)</span>
             <input
               required
               type="number"
@@ -126,8 +153,18 @@ export default function ProductForm({ product, onSave, onCancel }) {
               onChange={(e) => update("featured", e.target.checked)}
               className="h-4 w-4 accent-ink"
             />
-            <span className="field-label">Show on home page (featured)</span>
+            <span className="field-label">Featured (shown in “Most popular” on the home page)</span>
           </label>
+          <label className="flex items-center gap-2 sm:col-span-2">
+            <input
+              type="checkbox"
+              checked={form.isNew}
+              onChange={(e) => update("isNew", e.target.checked)}
+              className="h-4 w-4 accent-ink"
+            />
+            <span className="field-label">New arrival (shown in “New at HAK Store” with a New badge)</span>
+          </label>
+          {error && <p className="text-sm font-bold text-red-600 sm:col-span-2">{error}</p>}
         </div>
 
         <div>

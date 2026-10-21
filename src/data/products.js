@@ -1,12 +1,16 @@
-// Static product catalog. Replace with a database or API later.
-export const categories = ["All", "Electronics", "Fashion", "Home", "Accessories"];
+// Default catalog. The admin can change products, categories and coupons from the dashboard.
+export const defaultCategories = [
+  { name: "Electronics", icon: "🎧", description: "Headphones, smart watches, speakers and more." },
+  { name: "Fashion", icon: "👕", description: "Everyday clothing and shoes for every style." },
+  { name: "Home", icon: "🪴", description: "Lamps, mugs, plants and décor for your space." },
+  { name: "Accessories", icon: "👜", description: "Wallets, bags, sunglasses and finishing touches." },
+];
 
-export const categoryInfo = {
-  Electronics: { icon: "🎧", description: "Headphones, smart watches, speakers and more." },
-  Fashion: { icon: "👕", description: "Everyday clothing and shoes for every style." },
-  Home: { icon: "🪴", description: "Lamps, mugs, plants and décor for your space." },
-  Accessories: { icon: "👜", description: "Wallets, bags, sunglasses and finishing touches." },
-};
+// Example coupon codes (type "percent" or "fixed").
+export const defaultCoupons = [
+  { code: "WELCOME10", type: "percent", value: 10, minOrder: 0, active: true },
+  { code: "SAVE500", type: "fixed", value: 500, minOrder: 5000, active: true },
+];
 
 export const products = [
   {
@@ -30,6 +34,8 @@ export const products = [
     rating: 4.4,
     stock: 8,
     featured: true,
+    compareAt: 8999,
+    isNew: true,
     description:
       "Track fitness, heart rate and sleep. Water resistant with a 7-day battery.",
   },
@@ -64,6 +70,7 @@ export const products = [
     rating: 4.7,
     stock: 15,
     featured: true,
+    compareAt: 7499,
     description: "Lightweight running shoes with cushioned soles for all-day comfort.",
   },
   {
@@ -75,6 +82,7 @@ export const products = [
     rating: 4.2,
     stock: 10,
     featured: false,
+    isNew: true,
     description: "Classic denim jacket with a modern cut and durable stitching.",
   },
   {
@@ -97,6 +105,7 @@ export const products = [
     rating: 4.1,
     stock: 18,
     featured: false,
+    isNew: true,
     description: "Minimal LED desk lamp with three brightness levels.",
   },
   {
@@ -119,6 +128,7 @@ export const products = [
     rating: 4.4,
     stock: 30,
     featured: false,
+    compareAt: 2499,
     description: "Slim genuine leather wallet with six card slots.",
   },
   {
@@ -141,6 +151,7 @@ export const products = [
     rating: 4.5,
     stock: 14,
     featured: true,
+    isNew: true,
     description: "Water-resistant 25L backpack with a padded laptop sleeve.",
   },
 ];

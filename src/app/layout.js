@@ -1,10 +1,8 @@
 import { Tajawal } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/context/AuthContext";
-import { CartProvider } from "@/context/CartContext";
-import { OrdersProvider } from "@/context/OrdersContext";
-import { ProductsProvider } from "@/context/ProductsContext";
 import Navbar from "@/components/Navbar";
+import Providers from "@/components/Providers";
+import WhatsAppButton from "@/components/WhatsAppButton";
 import Footer from "@/components/Footer";
 
 const tajawal = Tajawal({
@@ -30,17 +28,12 @@ export default function RootLayout({ children }) {
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col font-sans">
-        <AuthProvider>
-          <ProductsProvider>
-            <CartProvider>
-              <OrdersProvider>
-                <Navbar />
-                <main className="flex-1">{children}</main>
-                <Footer />
-              </OrdersProvider>
-            </CartProvider>
-          </ProductsProvider>
-        </AuthProvider>
+        <Providers>
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <Footer />
+          <WhatsAppButton />
+        </Providers>
       </body>
     </html>
   );

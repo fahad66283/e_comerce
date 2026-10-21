@@ -6,6 +6,8 @@ import { useAuth } from "@/context/AuthContext";
 import { formatDate, useOrders } from "@/context/OrdersContext";
 import { useHydrated } from "@/lib/localStore";
 import OrderItems from "./OrderItems";
+import OrderTimeline from "./OrderTimeline";
+import PaymentInfo from "./PaymentInfo";
 import StatusBadge from "./StatusBadge";
 
 export default function OrderConfirmation() {
@@ -49,7 +51,19 @@ export default function OrderConfirmation() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-5 md:grid-cols-[1.4fr_1fr]">
+      <section className="panel mt-6">
+        <h2 className="mb-5 text-[1.05rem]">Order Status</h2>
+        <OrderTimeline order={order} />
+        <p className="mt-5 text-center text-sm text-grey-500">
+          Save your order ID <strong className="text-ink">#{order.id}</strong> to{" "}
+          <Link href={`/track-order?id=${order.id}`} className="font-extrabold text-brand-700 hover:underline">
+            track your order
+          </Link>{" "}
+          any time.
+        </p>
+      </section>
+
+      <div className="mt-5 grid gap-5 md:grid-cols-[1.4fr_1fr]">
         <section className="panel">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-[1.05rem]">Order Details</h2>
@@ -69,12 +83,12 @@ export default function OrderConfirmation() {
           <p className="mt-2 text-grey-500">📞 {customer.phone}</p>
           <p className="text-grey-500">✉️ {customer.email}</p>
           <h2 className="mb-1 mt-5 text-[1.05rem]">Payment</h2>
-          <p className="text-grey-500">💵 {order.payment}</p>
+          <PaymentInfo order={order} />
         </section>
       </div>
 
       <p className="mt-6 text-center text-xs text-grey-500">
-        This is a demo store, so no real order was placed and no payment was taken.
+        This is a demo store, so no real order was placed and no payment was processed.
       </p>
 
       <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -87,7 +101,7 @@ export default function OrderConfirmation() {
           </Link>
         ) : (
           <Link href="/signup?next=/account" className="btn btn-outline">
-            Sign Up to Track Orders
+            Create an Account
           </Link>
         )}
       </div>

@@ -7,7 +7,8 @@ const columns = [
     links: [
       { href: "/products", label: "All Products" },
       { href: "/categories", label: "Categories" },
-      { href: "/cart", label: "Cart" },
+      { href: "/wishlist", label: "Wishlist" },
+      { href: "/track-order", label: "Track Order" },
     ],
   },
   {
@@ -67,7 +68,13 @@ export default function Footer() {
         </div>
         <div className="flex flex-col items-center justify-between gap-2.5 py-5 text-[0.8rem] text-[#787C76] md:flex-row">
           <span>© 2026 HAK Store. All rights reserved.</span>
-          <span className="rounded-md bg-[#1A1A1A] px-2.5 py-1 text-[0.76rem]">💵 Cash on Delivery</span>
+          <div className="flex flex-wrap justify-center gap-2 text-[0.76rem]">
+            {["💵 COD", "🏦 Bank Transfer", "📱 JazzCash", "📲 Easypaisa"].map((m) => (
+              <span key={m} className="rounded-md bg-[#1A1A1A] px-2.5 py-1">
+                {m}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     </footer>

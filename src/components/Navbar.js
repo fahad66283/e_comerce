@@ -5,6 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { useOrders } from "@/context/OrdersContext";
+import { LOW_STOCK, useProducts } from "@/context/ProductsContext";
+import { useWishlist } from "@/context/WishlistContext";
 import { FREE_SHIPPING_MIN, formatPrice } from "@/data/products";
 import Logo from "./Logo";
 import SearchBox from "./SearchBox";
@@ -19,12 +22,19 @@ const links = [
 
 export default function Navbar() {
   const { count } = useCart();
+  const { count: wishCount } = useWishlist();
   const { user, isAdmin, logout } = useAuth();
+  const { products } = useProducts();
+  const { orders } = useOrders();
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  const navLinks = isAdmin ? [...links, { href: "/dashboard", label: "Dashboard" }] : links;
+  // Admin alerts: new orders to process + products running low.
+  const alerts = isAdmin
+    ? orders.filter((o) => o.status === "Processing").length + products.filter((p) => p.stock <= LOW_STOCK).length
+    : 0;
+  const navLinks = isAdmin ? [...links, { href: "/dashboard", label: "Dashboard", alerts }] : links;
   const close = () => setOpen(false);
 
   function handleLogout() {
@@ -35,9 +45,17 @@ export default function Navbar() {
 
   return (
     <>
-      <div className="bg-ink px-4 py-2 text-center text-[0.84rem] text-white">
-        🚚 <strong className="text-brand-500">Free shipping</strong> on orders over{" "}
-        {formatPrice(FREE_SHIPPING_MIN)} — delivery to every city
+      <div className="bg-ink px-4 py-2 text-[0.84rem] text-white">
+        <div className="container-page flex items-center justify-center gap-4 !px-0 sm:justify-between">
+          <span className="hidden w-24 sm:block" />
+          <span className="text-center">
+            🚚 <strong className="text-brand-500">Free shipping</strong> on orders over{" "}
+            {formatPrice(FREE_SHIPPING_MIN)}
+          </span>
+          <Link href="/track-order" className="hidden w-24 text-right font-bold hover:text-brand-500 sm:block">
+            Track Order
+          </Link>
+        </div>
       </div>
 
       <header className="sticky top-0 z-50 border-b border-grey-200 bg-white/95 backdrop-blur">
@@ -56,6 +74,11 @@ export default function Navbar() {
                 }`}
               >
                 {link.label}
+                {link.alerts > 0 && (
+                  <span className="ml-1.5 rounded-full bg-red-500 px-1.5 py-0.5 text-[0.65rem] font-extrabold text-white">
+                    {link.alerts}
+                  </span>
+                )}
               </Link>
             ))}
           </nav>
@@ -80,6 +103,18 @@ export default function Navbar() {
                 </Link>
               )}
             </div>
+            <Link
+              href="/wishlist"
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl transition hover:bg-grey-100"
+              aria-label={`Wishlist with ${wishCount} items`}
+            >
+              <span aria-hidden="true">♡</span>
+              {wishCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-brand-500 px-[3px] text-[0.65rem] font-extrabold text-ink">
+                  {wishCount}
+                </span>
+              )}
+            </Link>
             <Link
               href="/cart"
               className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl transition hover:bg-grey-100"
@@ -132,8 +167,17 @@ export default function Navbar() {
               className="border-b border-grey-200 px-1 py-3.5 text-xl font-extrabold"
             >
               {link.label}
+              {link.alerts > 0 && (
+                <span className="ml-2 rounded-full bg-red-500 px-2 py-0.5 text-sm text-white">{link.alerts}</span>
+              )}
             </Link>
           ))}
+          <Link href="/wishlist" onClick={close} className="border-b border-grey-200 px-1 py-3.5 text-xl font-extrabold">
+            Wishlist {wishCount > 0 && `(${wishCount})`}
+          </Link>
+          <Link href="/track-order" onClick={close} className="border-b border-grey-200 px-1 py-3.5 text-xl font-extrabold">
+            Track Order
+          </Link>
           {user ? (
             <>
               <Link

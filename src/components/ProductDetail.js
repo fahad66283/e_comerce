@@ -2,15 +2,21 @@
 
 import Link from "next/link";
 import { useProducts } from "@/context/ProductsContext";
+import { useReviews } from "@/context/ReviewsContext";
+import { whatsappLink } from "@/data/store";
 import { useHydrated } from "@/lib/localStore";
-import { formatPrice } from "@/data/products";
 import ProductImage from "./ProductImage";
 import ProductActions from "./ProductActions";
 import ProductCard from "./ProductCard";
+import Price from "./Price";
+import ProductReviews from "./ProductReviews";
+import { Stars } from "./Stars";
+import WishlistButton from "./WishlistButton";
 
 export default function ProductDetail({ id }) {
   const { products, getProduct } = useProducts();
   const hydrated = useHydrated();
+  const { getRating } = useReviews();
   const product = getProduct(id);
 
   if (!product) {
@@ -28,6 +34,7 @@ export default function ProductDetail({ id }) {
     );
   }
 
+  const { average, count } = getRating(product);
   const related = products
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
@@ -48,8 +55,13 @@ export default function ProductDetail({ id }) {
             {product.category}
           </span>
           <h1 className="mt-2 text-[clamp(1.6rem,3vw,2.2rem)]">{product.name}</h1>
-          <p className="mt-2 text-sm text-grey-500">⭐ {Number(product.rating).toFixed(1)} / 5</p>
-          <p className="mt-4 text-[1.6rem] font-extrabold">{formatPrice(product.price)}</p>
+          <a href="#reviews" className="mt-2 inline-flex items-center gap-2 text-sm text-grey-500 hover:text-ink">
+            <Stars value={average} />
+            {average.toFixed(1)} · {count} {count === 1 ? "review" : "reviews"}
+          </a>
+          <div className="mt-4">
+            <Price product={product} size="lg" />
+          </div>
           <p className="mt-4 text-grey-500">{product.description}</p>
 
           {product.stock > 0 ? (
@@ -63,6 +75,18 @@ export default function ProductDetail({ id }) {
             <p className="mt-4 font-bold text-red-600">Out of stock</p>
           )}
 
+          <div className="mt-4 flex flex-wrap gap-3">
+            <WishlistButton product={product} withLabel className="btn btn-outline btn-sm" />
+            <a
+              href={whatsappLink(`Hi HAK Store! I'd like to order: ${product.name} (${product.id})`)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-sm bg-[#25D366] text-white hover:bg-[#1ebe5b]"
+            >
+              Order on WhatsApp
+            </a>
+          </div>
+
           <ul className="mt-8 grid gap-2 border-t border-grey-200 pt-6 text-sm text-grey-700">
             <li>🚚 Free shipping on orders over Rs. 5,000</li>
             <li>🔄 7-day easy returns</li>
@@ -70,6 +94,8 @@ export default function ProductDetail({ id }) {
           </ul>
         </div>
       </div>
+
+      <ProductReviews product={product} />
 
       {related.length > 0 && (
         <section className="mt-16">

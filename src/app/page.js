@@ -1,15 +1,7 @@
 import Link from "next/link";
+import CategoryTiles from "@/components/CategoryTiles";
 import FeaturedProducts from "@/components/FeaturedProducts";
 import Newsletter from "@/components/Newsletter";
-
-const tiles = [
-  { label: "Electronics", icon: "🎧", href: "/products?category=Electronics" },
-  { label: "Fashion", icon: "👕", href: "/products?category=Fashion" },
-  { label: "Home", icon: "🪴", href: "/products?category=Home" },
-  { label: "Accessories", icon: "👜", href: "/products?category=Accessories" },
-  { label: "Popular", icon: "🔥", href: "#popular" },
-  { label: "All Products", icon: "🛍️", href: "/products" },
-];
 
 const features = [
   { icon: "🚚", title: "Fast Delivery", text: "To every city within 2–5 working days" },
@@ -49,20 +41,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="grid max-w-[460px] grid-cols-3 gap-3.5 lg:max-w-none">
-            {tiles.map((t) => (
-              <Link
-                key={t.label}
-                href={t.href}
-                className="flex flex-col items-center gap-2.5 rounded-card border-[1.5px] border-grey-200 bg-white px-2.5 py-5 text-center transition hover:-translate-y-[3px] hover:border-brand-500 hover:shadow-lift"
-              >
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-100 text-[1.3rem]">
-                  {t.icon}
-                </span>
-                <span className="text-[0.82rem] font-extrabold">{t.label}</span>
-              </Link>
-            ))}
-          </div>
+          <CategoryTiles />
         </div>
       </section>
 
@@ -78,10 +57,13 @@ export default function Home() {
       <section className="container-page py-9">
         <div className="grid gap-5 md:grid-cols-2">
           <div className="flex flex-col items-start gap-3 rounded-panel bg-ink p-8 text-white">
-            <h3 className="text-[1.4rem] text-white">Something for everyone</h3>
-            <p className="text-grey-400">Browse our full range of electronics, fashion, home and accessories.</p>
-            <Link href="/products" className="btn btn-primary">
-              Explore the Shop
+            <h3 className="text-[1.4rem] text-white">Deals of the week</h3>
+            <p className="text-grey-400">
+              Discounts on selected products. New customers get 10% off with code{" "}
+              <strong className="text-brand-500">WELCOME10</strong>.
+            </p>
+            <Link href="/products?filter=sale" className="btn btn-primary">
+              Shop the Sale
             </Link>
           </div>
           <div className="flex flex-col items-start gap-3 rounded-panel bg-brand-500 p-8">
@@ -100,6 +82,19 @@ export default function Home() {
           <h2 className="section-title">New at HAK Store</h2>
         </div>
         <FeaturedProducts mode="new" limit={4} />
+      </section>
+
+      <section className="container-page py-9">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
+          <div className="max-w-[600px]">
+            <span className="eyebrow">On sale</span>
+            <h2 className="section-title">Today&apos;s best deals</h2>
+          </div>
+          <Link href="/products?filter=sale" className="text-sm font-extrabold text-brand-700 hover:underline">
+            View all deals →
+          </Link>
+        </div>
+        <FeaturedProducts mode="sale" limit={4} />
       </section>
 
       <section className="container-page py-9">

@@ -7,35 +7,39 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useOrders } from "@/context/OrdersContext";
 import { useProducts } from "@/context/ProductsContext";
-import { getShipping } from "@/data/products";
+import { formatPrice } from "@/data/products";
+import { PAYMENT_METHODS, getPaymentMethod } from "@/data/store";
 import OrderSummary from "@/components/OrderSummary";
 
 const fields = [
   { name: "fullName", label: "Full Name", type: "text", autoComplete: "name" },
-  { name: "phone", label: "Phone Number", type: "tel", autoComplete: "tel" },
+  { name: "phone", label: "Phone Number", type: "tel", autoComplete: "tel", placeholder: "03XX XXXXXXX" },
   { name: "email", label: "Email", type: "email", autoComplete: "email" },
   { name: "city", label: "City", type: "text", autoComplete: "address-level2" },
   { name: "address", label: "Full Address", type: "text", autoComplete: "street-address", wide: true },
 ];
 
-const paymentOptions = [
-  { value: "cod", icon: "💵", title: "Cash on Delivery", text: "Pay in cash when your order arrives" },
-  { value: "card", icon: "💳", title: "Credit / Debit Card", text: "Coming soon", disabled: true },
-];
-
 export default function CheckoutPage() {
-  const { items, subtotal, loaded, clearCart } = useCart();
+  const { items, subtotal, discount, couponCode, shipping, total, loaded, clearCart } = useCart();
   const { user } = useAuth();
   const { placeOrder } = useOrders();
   const { reduceStock } = useProducts();
   const router = useRouter();
+  const [method, setMethod] = useState("cod");
   const [placing, setPlacing] = useState(false);
+  const [error, setError] = useState("");
+
+  const selected = getPaymentMethod(method);
 
   function handleSubmit(e) {
     e.preventDefault();
+    const tooMany = items.find(({ quantity, product }) => quantity > product.stock);
+    if (tooMany) {
+      setError(`Only ${tooMany.product.stock} × ${tooMany.product.name} left in stock. Please update your cart.`);
+      return;
+    }
     const form = new FormData(e.target);
-    const shipping = getShipping(subtotal);
-    // Static demo: the order is saved in this browser only, no payment is taken.
+    // Static demo: the order is saved in this browser only, no money is taken.
     const id = placeOrder({
       items: items.map(({ id, quantity, product }) => ({
         id,
@@ -43,18 +47,27 @@ export default function CheckoutPage() {
         name: product.name,
         price: product.price,
         emoji: product.emoji,
+        category: product.category,
       })),
       subtotal,
+      discount,
+      couponCode: discount > 0 ? couponCode : null,
       shipping,
-      total: subtotal + shipping,
-      payment: "Cash on Delivery",
+      total,
       notes: form.get("notes"),
+      guest: !user,
+      payment: {
+        method: selected.id,
+        title: selected.title,
+        reference: selected.manual ? form.get("reference").trim() : null,
+        status: "Pending",
+      },
       customer: {
-        name: form.get("fullName"),
-        phone: form.get("phone"),
+        name: form.get("fullName").trim(),
+        phone: form.get("phone").trim(),
         email: form.get("email"),
-        city: form.get("city"),
-        address: form.get("address"),
+        city: form.get("city").trim(),
+        address: form.get("address").trim(),
       },
     });
     reduceStock(items);
@@ -91,19 +104,22 @@ export default function CheckoutPage() {
 
       <form onSubmit={handleSubmit} className="grid items-start gap-9 lg:grid-cols-[1fr_370px]">
         <div className="grid gap-5">
-          <section className="panel">
-            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="text-[1.05rem]">Delivery Information</h3>
-              {!user && (
-                <p className="text-sm text-grey-500">
-                  Have an account?{" "}
-                  <Link href="/login?next=/checkout" className="font-extrabold text-brand-700 hover:underline">
-                    Login
-                  </Link>{" "}
-                  to track your order.
+          {!user && (
+            <div className="flex flex-col gap-3 rounded-panel border-[1.5px] border-brand-500 bg-brand-50 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-extrabold">Checking out as a guest</p>
+                <p className="text-sm text-grey-700">
+                  No account needed. You can track your order with its order ID and your email or phone.
                 </p>
-              )}
+              </div>
+              <Link href="/login?next=/checkout" className="btn btn-outline btn-sm shrink-0">
+                Login instead
+              </Link>
             </div>
+          )}
+
+          <section className="panel">
+            <h3 className="mb-4 text-[1.05rem]">Delivery Information</h3>
             <div className="grid gap-x-3.5 gap-y-4 sm:grid-cols-2">
               {fields.map((f) => (
                 <label key={f.name} className={f.wide ? "sm:col-span-2" : ""}>
@@ -113,6 +129,7 @@ export default function CheckoutPage() {
                     name={f.name}
                     type={f.type}
                     autoComplete={f.autoComplete}
+                    placeholder={f.placeholder}
                     defaultValue={f.name === "fullName" ? user?.name : f.name === "email" ? user?.email : undefined}
                     className="field-input"
                   />
@@ -128,9 +145,9 @@ export default function CheckoutPage() {
           <section className="panel">
             <h3 className="mb-4 text-[1.05rem]">Payment Method</h3>
             <div className="grid gap-2.5">
-              {paymentOptions.map((opt) => (
+              {PAYMENT_METHODS.map((opt) => (
                 <label
-                  key={opt.value}
+                  key={opt.id}
                   className={`flex items-center gap-3.5 rounded-field border-[1.5px] border-grey-200 px-[15px] py-[13px] transition has-[:checked]:border-ink has-[:checked]:bg-grey-50 ${
                     opt.disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
                   }`}
@@ -138,8 +155,9 @@ export default function CheckoutPage() {
                   <input
                     type="radio"
                     name="payment"
-                    value={opt.value}
-                    defaultChecked={opt.value === "cod"}
+                    value={opt.id}
+                    checked={method === opt.id}
+                    onChange={() => setMethod(opt.id)}
                     disabled={opt.disabled}
                     className="accent-ink"
                   />
@@ -151,10 +169,38 @@ export default function CheckoutPage() {
                 </label>
               ))}
             </div>
+
+            {selected.manual && (
+              <div className="mt-4 rounded-field border border-grey-200 bg-grey-50 p-4">
+                <p className="text-sm font-bold">
+                  Send {formatPrice(total)} to the account below, then enter your transaction ID:
+                </p>
+                <dl className="mt-2 grid gap-1 text-sm">
+                  {selected.details.map(([label, value]) => (
+                    <div key={label} className="flex justify-between gap-3">
+                      <dt className="text-grey-500">{label}</dt>
+                      <dd className="font-bold">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <label className="mt-3 block">
+                  <span className="field-label">Transaction ID / Reference</span>
+                  <input key={selected.id} required name="reference" minLength={4} className="field-input" />
+                </label>
+                <p className="mt-2 text-xs text-grey-500">
+                  We&apos;ll confirm your payment and then ship your order.
+                </p>
+              </div>
+            )}
           </section>
         </div>
 
         <OrderSummary showItems>
+          {error && (
+            <p role="alert" className="mt-3 rounded-field bg-red-500/15 px-3 py-2 text-sm font-bold text-red-300">
+              {error}
+            </p>
+          )}
           <button type="submit" className="btn btn-primary mt-[18px] w-full">
             Place Order
           </button>

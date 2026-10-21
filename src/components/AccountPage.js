@@ -56,7 +56,7 @@ export default function AccountPage() {
         <p className="section-sub">Manage your details and keep track of your orders.</p>
       </div>
 
-      <div className="grid items-start gap-8 lg:grid-cols-[320px_1fr]">
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[320px_minmax(0,1fr)]">
         <aside className="grid gap-5">
           <section className="panel">
             <div className="flex items-center gap-3.5">
@@ -136,13 +136,14 @@ export default function AccountPage() {
                     <div className="mt-4 border-t border-grey-200 pt-2">
                       <OrderItems order={order} />
                       <p className="mt-3 text-sm text-grey-500">
-                        Delivering to {order.customer.address}, {order.customer.city} · {order.payment}
+                        Delivering to {order.customer.address}, {order.customer.city} ·{" "}
+                        {`${order.payment.title} (${order.payment.status})`}
                       </p>
                       <Link
-                        href={`/order-confirmation?id=${order.id}`}
+                        href={`/track-order?id=${order.id}`}
                         className="mt-3 inline-block text-sm font-extrabold text-brand-700 hover:underline"
                       >
-                        View order page →
+                        Track this order →
                       </Link>
                     </div>
                   </details>
