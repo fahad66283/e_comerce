@@ -3,24 +3,30 @@
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 
-export default function AddToCartButton({ productId, quantity = 1, disabled = false, className = "" }) {
+// variant "icon": round "+" button used on product cards; "full": wide button.
+export default function AddToCartButton({ product, quantity = 1, variant = "full", className = "" }) {
   const { addToCart } = useCart();
   const [added, setAdded] = useState(false);
+  const soldOut = product.stock < 1;
 
   function handleClick() {
-    addToCart(productId, quantity);
+    addToCart(product.id, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 1200);
   }
 
-  if (disabled) {
+  if (variant === "icon") {
     return (
       <button
         type="button"
-        disabled
-        className={`cursor-not-allowed rounded-lg bg-gray-300 px-4 py-2 font-medium text-gray-600 ${className}`}
+        onClick={handleClick}
+        disabled={soldOut}
+        aria-label={soldOut ? `${product.name} is sold out` : `Add ${product.name} to cart`}
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xl transition disabled:cursor-not-allowed disabled:bg-grey-200 disabled:text-grey-400 ${
+          added ? "bg-brand-500 text-ink" : "bg-ink text-white hover:scale-105 hover:bg-brand-500 hover:text-ink"
+        } ${className}`}
       >
-        Sold Out
+        {added ? "✓" : "+"}
       </button>
     );
   }
@@ -29,11 +35,10 @@ export default function AddToCartButton({ productId, quantity = 1, disabled = fa
     <button
       type="button"
       onClick={handleClick}
-      className={`rounded-lg px-4 py-2 font-medium text-white transition ${
-        added ? "bg-green-600" : "bg-indigo-600 hover:bg-indigo-700"
-      } ${className}`}
+      disabled={soldOut}
+      className={`btn ${added ? "btn-dark" : "btn-primary"} ${className}`}
     >
-      {added ? "Added ✓" : "Add to Cart"}
+      {soldOut ? "Sold Out" : added ? "Added ✓" : "Add to Cart"}
     </button>
   );
 }

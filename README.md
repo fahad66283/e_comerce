@@ -1,11 +1,18 @@
-# ShopEase – E-commerce Store
+# HAK Store – E-commerce Store
 
 A static e-commerce web application built with **React**, **Next.js** (App Router) and **Tailwind CSS**.
 
+## Theme
+
+- Black and green brand colours with the **Tajawal** font, defined as design tokens in `src/app/globals.css`
+  (`ink`, `brand-*`, `grey-*`) together with shared classes such as `btn`, `btn-primary`, `panel` and `field-input`.
+- Logo files: `public/logo.svg` (light backgrounds), `public/logo-light.svg` (dark backgrounds) and
+  `src/app/icon.svg` (browser tab icon), all converted from `HAK_logo.pdf`.
+
 ## Features
 
-- Home page with hero, categories and featured products
-- Shop page with category filter, search and sorting
+- Home page with hero, category tiles, popular products, new arrivals, promos and newsletter sign-up
+- Shop page with category filter, search (also from the header search box) and sorting
 - Product detail pages (statically generated) with quantity selector and related products
 - Shopping cart saved in the browser (`localStorage`), with quantity controls and free-shipping logic
 - Checkout form with Cash on Delivery (demo order confirmation, no backend yet)
@@ -73,7 +80,7 @@ src/
 
 The default products live in `src/data/products.js`. The admin can also add, edit and delete
 products from `/admin`; "Reset to Default" restores the list from that file. Each product uses an
-emoji and gradient as a placeholder image; replace with real photos (via `next/image`) when ready.
+emoji on the brand green as a placeholder image; replace with real photos (via `next/image`) when ready.
 
 ## Next Steps
 

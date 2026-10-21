@@ -2,9 +2,6 @@
 
 import { useState } from "react";
 
-const inputClass =
-  "mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-600";
-
 export default function ContactForm() {
   const [sent, setSent] = useState(false);
 
@@ -15,50 +12,34 @@ export default function ContactForm() {
     setSent(true);
   }
 
-  if (sent) {
-    return (
-      <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
-        <p className="text-5xl">✅</p>
-        <h2 className="mt-4 text-2xl font-bold">Thanks for reaching out!</h2>
-        <p className="mt-2 text-gray-600">We&apos;ll get back to you within 24 hours.</p>
-        <button
-          type="button"
-          onClick={() => setSent(false)}
-          className="mt-6 text-indigo-600 hover:underline"
-        >
-          Send another message
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-6 shadow-sm">
-      <h2 className="text-xl font-bold">Send us a message</h2>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+    <form onSubmit={handleSubmit} className="panel">
+      <div className="grid gap-x-3.5 gap-y-4 sm:grid-cols-2">
         <label>
-          <span className="text-sm font-medium text-gray-700">Name</span>
-          <input required name="name" autoComplete="name" className={inputClass} />
+          <span className="field-label">Full Name</span>
+          <input required name="name" autoComplete="name" className="field-input" />
         </label>
         <label>
-          <span className="text-sm font-medium text-gray-700">Email</span>
-          <input required type="email" name="email" autoComplete="email" className={inputClass} />
+          <span className="field-label">Email</span>
+          <input required type="email" name="email" autoComplete="email" className="field-input" />
         </label>
         <label className="sm:col-span-2">
-          <span className="text-sm font-medium text-gray-700">Subject</span>
-          <input required name="subject" className={inputClass} />
+          <span className="field-label">Subject</span>
+          <input required name="subject" className="field-input" />
         </label>
         <label className="sm:col-span-2">
-          <span className="text-sm font-medium text-gray-700">Message</span>
-          <textarea required name="message" rows={5} className={inputClass} />
+          <span className="field-label">Your Message</span>
+          <textarea required name="message" rows={5} className="field-input" />
         </label>
       </div>
-      <button
-        type="submit"
-        className="mt-6 w-full rounded-lg bg-indigo-600 py-3 font-medium text-white hover:bg-indigo-700"
-      >
+      <button type="submit" className="btn btn-primary mt-5 w-full">
         Send Message
       </button>
+      {sent && (
+        <p role="status" className="mt-3 text-[0.88rem] font-bold text-brand-700">
+          ✓ Your message has been sent. We&apos;ll get back to you soon.
+        </p>
+      )}
     </form>
   );
 }

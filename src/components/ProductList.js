@@ -6,19 +6,28 @@ import { categories } from "@/data/products";
 import { useProducts } from "@/context/ProductsContext";
 import ProductCard from "./ProductCard";
 
+const categoryIcons = { All: "🛍️", Electronics: "🎧", Fashion: "👕", Home: "🪴", Accessories: "👜" };
+
 export default function ProductList() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { products } = useProducts();
-  const param = searchParams.get("category");
-  const category = categories.includes(param) ? param : "All";
-
-  const [search, setSearch] = useState("");
   const [sort, setSort] = useState("featured");
 
-  function selectCategory(c) {
-    router.replace(c === "All" ? pathname : `${pathname}?category=${c}`, { scroll: false });
+  // Category and search live in the URL so links and the header search box work.
+  const param = searchParams.get("category");
+  const category = categories.includes(param) ? param : "All";
+  const search = searchParams.get("q") ?? "";
+
+  function updateUrl(changes) {
+    const params = new URLSearchParams(searchParams);
+    for (const [key, value] of Object.entries(changes)) {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    }
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
   let list = products.filter(
@@ -32,38 +41,38 @@ export default function ProductList() {
 
   return (
     <>
-      <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap gap-2">
-          {categories.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => selectCategory(c)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                category === c
-                  ? "bg-indigo-600 text-white"
-                  : "border border-gray-300 bg-white text-gray-700 hover:border-indigo-600"
-              }`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-2">
+      <div className="flex gap-2.5 overflow-x-auto pb-1.5 [scrollbar-width:none]">
+        {categories.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => updateUrl({ category: c === "All" ? "" : c })}
+            className={`pill ${category === c ? "pill-active" : ""}`}
+          >
+            <span aria-hidden="true">{categoryIcons[c]}</span>
+            {c}
+          </button>
+        ))}
+      </div>
+
+      <div className="mb-[22px] mt-[18px] flex flex-wrap items-center justify-between gap-3">
+        <span className="text-[0.88rem] text-grey-500">{list.length} products found</span>
+        <div className="flex flex-wrap gap-2.5">
           <input
             type="search"
             placeholder="Search products..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-600 md:w-56"
+            onChange={(e) => updateUrl({ q: e.target.value })}
+            aria-label="Search products"
+            className="w-full rounded-full border-[1.5px] border-grey-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-ink sm:w-56"
           />
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-600"
+            className="rounded-full border-[1.5px] border-grey-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-ink"
             aria-label="Sort products"
           >
-            <option value="featured">Featured</option>
+            <option value="featured">Sort by: Featured</option>
             <option value="price-asc">Price: Low to High</option>
             <option value="price-desc">Price: High to Low</option>
             <option value="rating">Top Rated</option>
@@ -71,19 +80,16 @@ export default function ProductList() {
         </div>
       </div>
 
-      <p className="mt-6 text-sm text-gray-500">{list.length} products found</p>
-
       {list.length > 0 ? (
-        <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(224px,1fr))] gap-5">
           {list.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
       ) : (
-        <div className="mt-12 text-center text-gray-500">
-          <p className="text-5xl">🔍</p>
-          <p className="mt-4">No products match your search.</p>
-        </div>
+        <p className="py-16 text-center text-grey-500">
+          No products match your search. Try another word or category.
+        </p>
       )}
     </>
   );

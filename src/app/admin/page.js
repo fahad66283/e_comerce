@@ -1,7 +1,7 @@
 import AdminDashboard from "@/components/AdminDashboard";
 
 export const metadata = {
-  title: "Admin – ShopEase",
+  title: "Admin – HAK Store",
 };
 
 export default function AdminPage() {

@@ -3,133 +3,133 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
-import { formatPrice } from "@/data/products";
 import OrderSummary from "@/components/OrderSummary";
 
 const fields = [
   { name: "fullName", label: "Full Name", type: "text", autoComplete: "name" },
-  { name: "email", label: "Email", type: "email", autoComplete: "email" },
   { name: "phone", label: "Phone Number", type: "tel", autoComplete: "tel" },
-  { name: "address", label: "Address", type: "text", autoComplete: "street-address", wide: true },
+  { name: "email", label: "Email", type: "email", autoComplete: "email" },
   { name: "city", label: "City", type: "text", autoComplete: "address-level2" },
-  { name: "postalCode", label: "Postal Code", type: "text", autoComplete: "postal-code" },
+  { name: "address", label: "Full Address", type: "text", autoComplete: "street-address", wide: true },
+];
+
+const paymentOptions = [
+  { value: "cod", icon: "💵", title: "Cash on Delivery", text: "Pay in cash when your order arrives" },
+  { value: "card", icon: "💳", title: "Credit / Debit Card", text: "Coming soon", disabled: true },
 ];
 
 export default function CheckoutPage() {
   const { items, loaded, clearCart } = useCart();
-  const [payment, setPayment] = useState("cod");
   const [orderId, setOrderId] = useState(null);
 
   function handleSubmit(e) {
     e.preventDefault();
     // Static demo: no backend yet, so just generate an order number and clear the cart.
-    setOrderId(`ORD-${Date.now().toString().slice(-6)}`);
+    setOrderId(`#HAK-${Date.now().toString().slice(-6)}`);
     clearCart();
   }
 
   if (orderId) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-24 text-center">
-        <p className="text-6xl">🎉</p>
-        <h1 className="mt-4 text-3xl font-bold">Thank you for your order!</h1>
-        <p className="mt-2 text-gray-600">
-          Your order number is <span className="font-semibold">{orderId}</span>.
+      <div className="mx-auto max-w-[500px] px-6 py-16 text-center">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-brand-100">
+          <svg viewBox="0 0 24 24" fill="none" className="h-[38px] w-[38px]" aria-hidden="true">
+            <path d="M5 13l4 4L19 7" stroke="#3F8C2E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <h1 className="section-title">Your order has been received!</h1>
+        <p className="mt-2.5 text-grey-500">
+          Thank you for shopping at HAK Store. This is a demo store, so no real order was placed.
         </p>
-        <p className="mt-1 text-sm text-gray-500">
-          This is a demo store, so no real order was placed.
-        </p>
-        <Link
-          href="/products"
-          className="mt-8 inline-block rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white hover:bg-indigo-700"
-        >
-          Continue Shopping
-        </Link>
+        <div className="my-4 inline-block rounded-full border-[1.5px] border-grey-200 bg-grey-100 px-[22px] py-2.5 font-extrabold tracking-wide">
+          {orderId}
+        </div>
+        <div>
+          <Link href="/products" className="btn btn-primary">
+            Continue Shopping
+          </Link>
+        </div>
       </div>
     );
   }
 
   if (!loaded) {
-    return <p className="mx-auto max-w-6xl px-4 py-10 text-gray-500">Loading...</p>;
+    return <p className="container-page py-16 text-grey-500">Loading...</p>;
   }
 
   if (items.length === 0) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-24 text-center">
-        <h1 className="text-2xl font-bold">Your cart is empty</h1>
-        <Link href="/products" className="mt-4 inline-block text-indigo-600 hover:underline">
-          Go to Shop →
+      <div className="mx-auto max-w-[500px] px-6 py-16 text-center">
+        <h1 className="section-title">Your cart is empty</h1>
+        <Link href="/products" className="btn btn-primary mt-6">
+          Go to Shop
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
-      <h1 className="text-3xl font-bold">Checkout</h1>
+    <div className="container-page py-16">
+      <div className="mb-8">
+        <span className="eyebrow">Checkout</span>
+        <h1 className="section-title">Shipping &amp; payment details</h1>
+      </div>
 
-      <form onSubmit={handleSubmit} className="mt-8 grid gap-8 lg:grid-cols-3">
-        <div className="space-y-8 lg:col-span-2">
-          <section className="rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold">Shipping Details</h2>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <form onSubmit={handleSubmit} className="grid items-start gap-9 lg:grid-cols-[1fr_370px]">
+        <div className="grid gap-5">
+          <section className="panel">
+            <h3 className="mb-4 text-[1.05rem]">Delivery Information</h3>
+            <div className="grid gap-x-3.5 gap-y-4 sm:grid-cols-2">
               {fields.map((f) => (
                 <label key={f.name} className={f.wide ? "sm:col-span-2" : ""}>
-                  <span className="text-sm font-medium text-gray-700">{f.label}</span>
+                  <span className="field-label">{f.label}</span>
                   <input
                     required
                     name={f.name}
                     type={f.type}
                     autoComplete={f.autoComplete}
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-600"
+                    className="field-input"
                   />
                 </label>
               ))}
+              <label className="sm:col-span-2">
+                <span className="field-label">Order Notes (optional)</span>
+                <textarea name="notes" rows={3} className="field-input" />
+              </label>
             </div>
           </section>
 
-          <section className="rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold">Payment Method</h2>
-            <div className="mt-4 space-y-3">
-              {[
-                { value: "cod", label: "💵 Cash on Delivery" },
-                { value: "card", label: "💳 Credit / Debit Card (coming soon)", disabled: true },
-              ].map((opt) => (
+          <section className="panel">
+            <h3 className="mb-4 text-[1.05rem]">Payment Method</h3>
+            <div className="grid gap-2.5">
+              {paymentOptions.map((opt) => (
                 <label
                   key={opt.value}
-                  className={`flex items-center gap-3 rounded-lg border p-4 ${
-                    payment === opt.value ? "border-indigo-600 bg-indigo-50" : "border-gray-300"
-                  } ${opt.disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+                  className={`flex items-center gap-3.5 rounded-field border-[1.5px] border-grey-200 px-[15px] py-[13px] transition has-[:checked]:border-ink has-[:checked]:bg-grey-50 ${
+                    opt.disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                  }`}
                 >
                   <input
                     type="radio"
                     name="payment"
                     value={opt.value}
-                    checked={payment === opt.value}
+                    defaultChecked={opt.value === "cod"}
                     disabled={opt.disabled}
-                    onChange={() => setPayment(opt.value)}
+                    className="accent-ink"
                   />
-                  {opt.label}
+                  <span className="w-8 text-center text-xl">{opt.icon}</span>
+                  <span>
+                    <strong className="block text-[0.9rem]">{opt.title}</strong>
+                    <span className="text-[0.76rem] text-grey-500">{opt.text}</span>
+                  </span>
                 </label>
               ))}
             </div>
           </section>
         </div>
 
-        <OrderSummary>
-          <ul className="mt-4 space-y-2 border-t border-gray-200 pt-4 text-sm">
-            {items.map(({ id, quantity, product }) => (
-              <li key={id} className="flex justify-between gap-2">
-                <span className="text-gray-600">
-                  {product.name} × {quantity}
-                </span>
-                <span>{formatPrice(product.price * quantity)}</span>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="submit"
-            className="mt-6 w-full rounded-lg bg-indigo-600 py-3 font-medium text-white hover:bg-indigo-700"
-          >
+        <OrderSummary showItems>
+          <button type="submit" className="btn btn-primary mt-[18px] w-full">
             Place Order
           </button>
         </OrderSummary>

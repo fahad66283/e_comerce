@@ -15,19 +15,16 @@ export default function AdminDashboard() {
   const [message, setMessage] = useState("");
 
   if (!hydrated) {
-    return <p className="mx-auto max-w-6xl px-4 py-10 text-gray-500">Loading...</p>;
+    return <p className="container-page py-16 text-grey-500">Loading...</p>;
   }
 
   if (!isAdmin) {
     return (
-      <div className="mx-auto max-w-md px-4 py-24 text-center">
+      <div className="mx-auto max-w-md px-6 py-24 text-center">
         <p className="text-5xl">🔒</p>
-        <h1 className="mt-4 text-2xl font-bold">Admin access only</h1>
-        <p className="mt-2 text-gray-500">Please login with the admin account to manage products.</p>
-        <Link
-          href="/login"
-          className="mt-8 inline-block rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white hover:bg-indigo-700"
-        >
+        <h1 className="section-title mt-4">Admin access only</h1>
+        <p className="mt-2 text-grey-500">Please login with the admin account to manage products.</p>
+        <Link href="/login" className="btn btn-primary mt-8">
           Login
         </Link>
       </div>
@@ -63,25 +60,18 @@ export default function AdminDashboard() {
   const outOfStock = products.filter((p) => p.stock < 1).length;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
+    <div className="container-page py-16">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <p className="text-gray-500">Manage your store&apos;s product listings</p>
+          <span className="eyebrow">Admin</span>
+          <h1 className="section-title">Admin Dashboard</h1>
+          <p className="section-sub">Manage your store&apos;s product listings</p>
         </div>
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={handleReset}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:border-red-500 hover:text-red-600"
-          >
+        <div className="flex flex-wrap gap-3">
+          <button type="button" onClick={handleReset} className="btn btn-outline btn-sm">
             Reset to Default
           </button>
-          <button
-            type="button"
-            onClick={() => setEditing("new")}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-          >
+          <button type="button" onClick={() => setEditing("new")} className="btn btn-primary btn-sm">
             + Add Product
           </button>
         </div>
@@ -93,15 +83,15 @@ export default function AdminDashboard() {
           { label: "Items in Stock", value: totalStock },
           { label: "Out of Stock", value: outOfStock },
         ].map((stat) => (
-          <div key={stat.label} className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">{stat.label}</p>
-            <p className="mt-1 text-3xl font-bold">{stat.value}</p>
+          <div key={stat.label} className="rounded-card border-[1.5px] border-grey-200 bg-white p-5">
+            <p className="text-sm font-semibold text-grey-500">{stat.label}</p>
+            <p className="mt-1 text-3xl font-black text-brand-600">{stat.value}</p>
           </div>
         ))}
       </div>
 
       {message && (
-        <p role="status" className="mt-6 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <p role="status" className="mt-6 rounded-field bg-brand-100 px-4 py-3 text-sm font-bold text-brand-700">
           {message}
         </p>
       )}
@@ -117,9 +107,9 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div className="mt-6 overflow-x-auto rounded-2xl bg-white shadow-sm">
+      <div className="card mt-6 overflow-x-auto">
         <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="border-b border-gray-200 bg-gray-50 text-gray-600">
+          <thead className="border-b border-grey-200 bg-grey-50 text-grey-500">
             <tr>
               <th className="px-4 py-3 font-medium">Product</th>
               <th className="px-4 py-3 font-medium">Category</th>
@@ -129,22 +119,20 @@ export default function AdminDashboard() {
               <th className="px-4 py-3 text-right font-medium">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-grey-200">
             {products.map((p) => (
-              <tr key={p.id} className="hover:bg-gray-50">
+              <tr key={p.id} className="hover:bg-grey-50">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <span
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-xl ${p.color}`}
-                    >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-xl">
                       {p.emoji}
                     </span>
-                    <Link href={`/products/${p.id}`} className="font-medium hover:text-indigo-600">
+                    <Link href={`/products/${p.id}`} className="font-bold hover:text-brand-700">
                       {p.name}
                     </Link>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-gray-600">{p.category}</td>
+                <td className="px-4 py-3 text-grey-500">{p.category}</td>
                 <td className="px-4 py-3">{formatPrice(p.price)}</td>
                 <td className={`px-4 py-3 ${p.stock < 1 ? "font-medium text-red-600" : ""}`}>
                   {p.stock < 1 ? "Out of stock" : p.stock}
@@ -157,14 +145,14 @@ export default function AdminDashboard() {
                       setEditing(p);
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
-                    className="mr-3 font-medium text-indigo-600 hover:underline"
+                    className="mr-3 font-bold text-ink hover:text-brand-700 hover:underline"
                   >
                     Edit
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(p)}
-                    className="font-medium text-red-600 hover:underline"
+                    className="font-bold text-red-600 hover:underline"
                   >
                     Delete
                   </button>
@@ -174,7 +162,7 @@ export default function AdminDashboard() {
           </tbody>
         </table>
         {products.length === 0 && (
-          <p className="px-4 py-10 text-center text-gray-500">No products. Add one to get started.</p>
+          <p className="px-4 py-10 text-center text-grey-500">No products. Add one to get started.</p>
         )}
       </div>
     </div>

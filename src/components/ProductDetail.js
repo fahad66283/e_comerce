@@ -15,16 +15,13 @@ export default function ProductDetail({ id }) {
 
   if (!product) {
     // Products added by the admin only exist in the browser, so wait until it is readable.
-    if (!hydrated) return <p className="mx-auto max-w-6xl px-4 py-10 text-gray-500">Loading...</p>;
+    if (!hydrated) return <p className="container-page py-16 text-grey-500">Loading...</p>;
     return (
-      <div className="mx-auto max-w-xl px-4 py-24 text-center">
+      <div className="mx-auto max-w-[500px] px-6 py-16 text-center">
         <p className="text-6xl">🤷</p>
-        <h1 className="mt-4 text-3xl font-bold">Product not found</h1>
-        <p className="mt-2 text-gray-500">This product may have been removed.</p>
-        <Link
-          href="/products"
-          className="mt-8 inline-block rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white hover:bg-indigo-700"
-        >
+        <h1 className="section-title mt-4">Product not found</h1>
+        <p className="mt-2 text-grey-500">This product may have been removed.</p>
+        <Link href="/products" className="btn btn-primary mt-8">
           Back to Shop
         </Link>
       </div>
@@ -33,40 +30,42 @@ export default function ProductDetail({ id }) {
 
   const related = products
     .filter((p) => p.category === product.category && p.id !== product.id)
-    .slice(0, 3);
+    .slice(0, 4);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
-      <nav className="text-sm text-gray-500">
-        <Link href="/" className="hover:text-indigo-600">Home</Link> /{" "}
-        <Link href="/products" className="hover:text-indigo-600">Shop</Link> /{" "}
-        <span className="text-gray-900">{product.name}</span>
+    <div className="container-page py-12">
+      <nav className="text-sm text-grey-500">
+        <Link href="/" className="hover:text-ink">Home</Link> /{" "}
+        <Link href="/products" className="hover:text-ink">Shop</Link> /{" "}
+        <span className="font-bold text-ink">{product.name}</span>
       </nav>
 
-      <div className="mt-6 grid gap-10 md:grid-cols-2">
+      <div className="mt-6 grid items-start gap-10 md:grid-cols-2">
         <ProductImage product={product} size="lg" />
 
-        <div>
-          <p className="text-sm font-medium uppercase tracking-wide text-indigo-600">
+        <div className="md:py-4">
+          <span className="text-[0.75rem] font-extrabold uppercase tracking-wide text-brand-700">
             {product.category}
-          </p>
-          <h1 className="mt-2 text-3xl font-bold">{product.name}</h1>
-          <p className="mt-2 text-amber-500">★ {product.rating} / 5</p>
-          <p className="mt-4 text-3xl font-bold">{formatPrice(product.price)}</p>
-          <p className="mt-6 leading-relaxed text-gray-600">{product.description}</p>
+          </span>
+          <h1 className="mt-2 text-[clamp(1.6rem,3vw,2.2rem)]">{product.name}</h1>
+          <p className="mt-2 text-sm text-grey-500">⭐ {Number(product.rating).toFixed(1)} / 5</p>
+          <p className="mt-4 text-[1.6rem] font-extrabold">{formatPrice(product.price)}</p>
+          <p className="mt-4 text-grey-500">{product.description}</p>
 
           {product.stock > 0 ? (
             <>
-              <p className="mt-4 text-sm text-green-600">✓ In stock ({product.stock} available)</p>
+              <p className="mt-4 text-sm font-bold text-brand-700">
+                ✓ In stock ({product.stock} available)
+              </p>
               <ProductActions product={product} />
             </>
           ) : (
-            <p className="mt-4 font-medium text-red-600">Out of stock</p>
+            <p className="mt-4 font-bold text-red-600">Out of stock</p>
           )}
 
-          <ul className="mt-8 space-y-2 border-t border-gray-200 pt-6 text-sm text-gray-600">
+          <ul className="mt-8 grid gap-2 border-t border-grey-200 pt-6 text-sm text-grey-700">
             <li>🚚 Free shipping on orders over Rs. 5,000</li>
-            <li>↩️ 7-day easy returns</li>
+            <li>🔄 7-day easy returns</li>
             <li>💵 Cash on delivery available</li>
           </ul>
         </div>
@@ -74,8 +73,8 @@ export default function ProductDetail({ id }) {
 
       {related.length > 0 && (
         <section className="mt-16">
-          <h2 className="text-2xl font-bold">You may also like</h2>
-          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <h2 className="section-title mb-6">You may also like</h2>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(224px,1fr))] gap-5">
             {related.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}

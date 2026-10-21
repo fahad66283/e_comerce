@@ -1,7 +1,7 @@
 import AuthForm from "@/components/AuthForm";
 
 export const metadata = {
-  title: "Register – ShopEase",
+  title: "Register – HAK Store",
 };
 
 export default function RegisterPage() {

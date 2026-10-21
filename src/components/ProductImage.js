@@ -1,14 +1,20 @@
-// Placeholder product "image" made from an emoji and a gradient.
+// Placeholder product "image": the product's emoji on the brand's soft green.
 // Swap for next/image once real product photos are available.
-export default function ProductImage({ product, size = "md" }) {
-  const sizes = { md: "h-48 text-6xl", lg: "h-80 md:h-96 text-9xl", sm: "h-20 w-20 text-4xl" };
+const sizes = {
+  sm: "h-[54px] w-[54px] rounded-xl text-[1.6rem]",
+  md: "aspect-[1.1] w-full text-[3.2rem]",
+  lg: "min-h-[300px] w-full rounded-panel text-[5.5rem] md:min-h-[420px]",
+};
+
+export default function ProductImage({ product, size = "md", children }) {
   return (
     <div
-      className={`flex items-center justify-center rounded-xl bg-gradient-to-br ${product.color} ${sizes[size]}`}
+      className={`relative flex shrink-0 items-center justify-center bg-brand-50 ${sizes[size]}`}
       role="img"
       aria-label={product.name}
     >
-      <span className="drop-shadow-lg">{product.emoji}</span>
+      {children}
+      <span aria-hidden="true">{product.emoji}</span>
     </div>
   );
 }

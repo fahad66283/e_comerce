@@ -3,17 +3,21 @@
 import { useProducts } from "@/context/ProductsContext";
 import ProductCard from "./ProductCard";
 
-export default function FeaturedProducts() {
+// mode "featured": products marked featured; "new": the most recently added ones.
+export default function FeaturedProducts({ mode = "featured", limit = 8 }) {
   const { products } = useProducts();
-  const featured = products.filter((p) => p.featured);
+  const list =
+    mode === "new"
+      ? products.slice(-limit).reverse()
+      : products.filter((p) => p.featured).slice(0, limit);
 
-  if (featured.length === 0) {
-    return <p className="mt-6 text-gray-500">No featured products yet.</p>;
+  if (list.length === 0) {
+    return <p className="text-grey-500">No products to show yet.</p>;
   }
 
   return (
-    <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {featured.map((product) => (
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(224px,1fr))] gap-5">
+      {list.map((product) => (
         <ProductCard key={product.id} product={product} />
       ))}
     </div>

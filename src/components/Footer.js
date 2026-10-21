@@ -1,32 +1,64 @@
 import Link from "next/link";
+import Logo from "./Logo";
+
+const columns = [
+  {
+    title: "Shop",
+    links: [
+      { href: "/products", label: "All Products" },
+      { href: "/cart", label: "Cart" },
+      { href: "/checkout", label: "Checkout" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { href: "/about", label: "About Us" },
+      { href: "/contact", label: "Contact Us" },
+    ],
+  },
+  {
+    title: "Account",
+    links: [
+      { href: "/login", label: "Login" },
+      { href: "/register", label: "Register" },
+    ],
+  },
+];
 
 export default function Footer() {
   return (
-    <footer className="mt-16 bg-gray-900 text-gray-300">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-3">
-        <div>
-          <h3 className="text-lg font-bold text-white">🛍️ ShopEase</h3>
-          <p className="mt-2 text-sm">Quality products at great prices, delivered to your door.</p>
+    <footer className="mt-16 bg-ink pt-[52px] text-[#C9CCC8]">
+      <div className="container-page">
+        <div className="grid gap-9 border-b border-[#262626] pb-9 text-center md:grid-cols-2 md:text-left lg:grid-cols-[1.3fr_1fr_1fr_1fr]">
+          <div className="flex flex-col items-center md:items-start">
+            <Logo light className="h-8" />
+            <p className="mt-3 max-w-[270px] text-[0.88rem] text-[#8C9088]">
+              Your store for everything you need, delivered to every city.
+            </p>
+          </div>
+          {columns.map((col) => (
+            <div key={col.title}>
+              <h5 className="mb-3.5 text-[0.9rem] font-extrabold text-white">{col.title}</h5>
+              <ul className="grid gap-2.5">
+                {col.links.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="text-[0.88rem] text-[#A8ACA4] transition-colors hover:text-brand-500"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
-        <div>
-          <h4 className="font-semibold text-white">Shop</h4>
-          <ul className="mt-2 space-y-1 text-sm">
-            <li><Link href="/products" className="hover:text-white">All Products</Link></li>
-            <li><Link href="/cart" className="hover:text-white">Cart</Link></li>
-            <li><Link href="/about" className="hover:text-white">About Us</Link></li>
-            <li><Link href="/contact" className="hover:text-white">Contact Us</Link></li>
-          </ul>
+        <div className="flex flex-col items-center justify-between gap-2.5 py-5 text-[0.8rem] text-[#787C76] md:flex-row">
+          <span>© 2026 HAK Store. All rights reserved.</span>
+          <span className="rounded-md bg-[#1A1A1A] px-2.5 py-1 text-[0.76rem]">💵 Cash on Delivery</span>
         </div>
-        <div>
-          <h4 className="font-semibold text-white">Contact</h4>
-          <ul className="mt-2 space-y-1 text-sm">
-            <li>Kamisofts@gmail.com</li>
-            <li>Mon – Sat, 9am – 6pm</li>
-          </ul>
-        </div>
-      </div>
-      <div className="border-t border-gray-800 py-4 text-center text-sm">
-        © 2026 ShopEase. All rights reserved.
       </div>
     </footer>
   );

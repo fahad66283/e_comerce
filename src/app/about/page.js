@@ -1,94 +1,69 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "About Us – ShopEase",
+  title: "About Us – HAK Store",
 };
 
 const values = [
-  { icon: "⭐", title: "Quality First", text: "Every product is checked before it reaches you." },
-  { icon: "💰", title: "Fair Prices", text: "Great products without the big price tag." },
-  { icon: "🤝", title: "Customer Care", text: "Friendly support whenever you need help." },
-  { icon: "🚚", title: "Fast Delivery", text: "Quick, reliable shipping across the country." },
+  { icon: "✅", title: "Trusted Quality", text: "We choose every product carefully before adding it to the store." },
+  { icon: "🧭", title: "Wide Selection", text: "From electronics to fashion, everything in one place." },
+  { icon: "💬", title: "Great Customer Service", text: "Our team is happy to help before and after you buy." },
 ];
 
 const stats = [
   { value: "10K+", label: "Happy Customers" },
-  { value: "500+", label: "Products" },
+  { value: "4", label: "Product Categories" },
   { value: "50+", label: "Cities Served" },
-  { value: "4.8★", label: "Average Rating" },
+  { value: "4.7", label: "Customer Rating" },
+  { value: "6 days", label: "Support Every Week" },
+  { value: "7", label: "Days to Return" },
 ];
 
 export default function AboutPage() {
   return (
-    <>
-      <section className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-        <div className="mx-auto max-w-4xl px-4 py-16 text-center">
-          <h1 className="text-4xl font-extrabold md:text-5xl">About ShopEase</h1>
-          <p className="mt-4 text-lg text-indigo-100">
-            Making online shopping simple, affordable and enjoyable for everyone.
-          </p>
-        </div>
-      </section>
-
-      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 md:grid-cols-2">
+    <div className="container-page py-16">
+      <div className="grid items-center gap-12 lg:grid-cols-2">
         <div>
-          <h2 className="text-3xl font-bold">Our Story</h2>
-          <p className="mt-4 leading-relaxed text-gray-600">
-            ShopEase started with a simple idea: everyone should be able to find quality products
-            at fair prices without the hassle. What began as a small online shop has grown into a
-            store offering electronics, fashion, home goods and accessories.
+          <span className="eyebrow">About Us</span>
+          <h1 className="section-title">The HAK Store story</h1>
+          <p className="mt-3.5 text-grey-700">
+            HAK Store started with a simple idea: bring everything you need every day into one
+            online place that combines quality with easy shopping. We work with trusted suppliers to
+            offer a varied range of electronics, fashion, home goods and accessories, with delivery
+            that reaches every city.
           </p>
-          <p className="mt-4 leading-relaxed text-gray-600">
-            We work directly with trusted suppliers to bring you the best deals, and we are
-            committed to giving every customer a smooth experience from browsing to delivery.
-          </p>
-        </div>
-        <div className="flex h-72 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-300 to-pink-500 text-9xl">
-          🏬
-        </div>
-      </section>
-
-      <section className="bg-white py-16">
-        <div className="mx-auto max-w-6xl px-4">
-          <h2 className="text-center text-3xl font-bold">Why Choose Us</h2>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid gap-4">
             {values.map((v) => (
-              <div key={v.title} className="rounded-2xl bg-gray-50 p-6 text-center">
-                <p className="text-4xl">{v.icon}</p>
-                <h3 className="mt-4 font-semibold">{v.title}</h3>
-                <p className="mt-2 text-sm text-gray-600">{v.text}</p>
+              <div key={v.title} className="flex items-start gap-3.5">
+                <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl bg-brand-100 text-[1.3rem]">
+                  {v.icon}
+                </span>
+                <div>
+                  <h4>{v.title}</h4>
+                  <p className="text-[0.88rem] text-grey-500">{v.text}</p>
+                </div>
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      <section className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-16 md:grid-cols-4">
-        {stats.map((s) => (
-          <div key={s.label} className="text-center">
-            <p className="text-4xl font-extrabold text-indigo-600">{s.value}</p>
-            <p className="mt-2 text-gray-600">{s.label}</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/products" className="btn btn-primary">
+              Browse Products
+            </Link>
+            <Link href="/contact" className="btn btn-outline">
+              Contact Us
+            </Link>
           </div>
-        ))}
-      </section>
-
-      <section className="mx-auto max-w-4xl px-4 pb-8 text-center">
-        <h2 className="text-2xl font-bold">Ready to start shopping?</h2>
-        <div className="mt-6 flex justify-center gap-4">
-          <Link
-            href="/products"
-            className="rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white hover:bg-indigo-700"
-          >
-            Browse Products
-          </Link>
-          <Link
-            href="/contact"
-            className="rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium hover:border-indigo-600"
-          >
-            Contact Us
-          </Link>
         </div>
-      </section>
-    </>
+
+        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
+          {stats.map((s) => (
+            <div key={s.label} className="rounded-card border-[1.5px] border-grey-200 bg-white px-3.5 py-6 text-center">
+              <div className="text-[1.7rem] font-black text-brand-600">{s.value}</div>
+              <div className="mt-1 text-[0.76rem] font-semibold text-grey-500">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

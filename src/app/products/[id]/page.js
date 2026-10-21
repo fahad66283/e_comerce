@@ -9,7 +9,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }) {
   const { id } = await params;
   const product = getProduct(id);
-  return { title: product ? `${product.name} – ShopEase` : "Product – ShopEase" };
+  return { title: product ? `${product.name} – HAK Store` : "Product – HAK Store" };
 }
 
 export default async function ProductPage({ params }) {
