@@ -6,6 +6,7 @@ import { useId, useState } from "react";
 import { useProducts } from "@/context/ProductsContext";
 import { formatPrice } from "@/data/products";
 import { matchesSearch } from "@/lib/search";
+import ProductImage from "./ProductImage";
 
 // Header search with live product suggestions. Enter opens the shop page with ?q=...
 export default function SearchBox({ className = "", onSearch }) {
@@ -73,9 +74,7 @@ export default function SearchBox({ className = "", onSearch }) {
                     onClick={done}
                     className="flex items-center gap-3 px-4 py-2.5 hover:bg-grey-50"
                   >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50">
-                      {p.emoji}
-                    </span>
+                    <ProductImage product={p} size="xs" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-bold">{p.name}</span>
                       <span className="text-xs text-grey-500">{p.category}</span>

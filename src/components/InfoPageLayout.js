@@ -47,7 +47,7 @@ export function PolicySection({ title, children }) {
   return (
     <section className="border-b border-grey-200 py-6 first:pt-0 last:border-0">
       <h2 className="mb-3 text-lg">{title}</h2>
-      <div className="grid gap-3 text-grey-700 [&_li]:ml-5 [&_ul]:grid [&_ul]:list-disc [&_ul]:gap-1.5">{children}</div>
+      <div className="text-grey-700">{children}</div>
     </section>
   );
 }

@@ -1,4 +1,5 @@
 import { formatPrice } from "@/data/products";
+import ProductImage from "./ProductImage";
 
 // Line items and totals of a saved order.
 export default function OrderItems({ order }) {
@@ -7,9 +8,7 @@ export default function OrderItems({ order }) {
       <ul className="divide-y divide-grey-200">
         {order.items.map((item) => (
           <li key={item.id} className="flex items-center gap-3 py-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-xl">
-              {item.emoji}
-            </span>
+            <ProductImage product={{ name: item.name, emoji: item.emoji, images: item.image ? [item.image] : [] }} size="sm" />
             <span className="flex-1 text-[0.9rem] font-bold">
               {item.name} <span className="font-normal text-grey-500">× {item.quantity}</span>
             </span>

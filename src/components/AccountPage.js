@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { formatDate, useOrders } from "@/context/OrdersContext";
+import { ROLE_LABELS } from "@/data/accounts";
 import { formatPrice } from "@/data/products";
+import ChangePassword from "./ChangePassword";
 import OrderItems from "./OrderItems";
 import StatusBadge from "./StatusBadge";
 
@@ -79,7 +81,7 @@ export default function AccountPage() {
               </div>
             </dl>
             <p className="mt-4 text-sm text-grey-500">
-              Account type: <strong className="text-ink">{isAdmin ? "Administrator" : "Customer"}</strong>
+              Account type: <strong className="text-ink">{ROLE_LABELS[user.role]}</strong>
             </p>
             <div className="mt-5 grid gap-2.5">
               {isAdmin && (
@@ -92,6 +94,8 @@ export default function AccountPage() {
               </button>
             </div>
           </section>
+
+          <ChangePassword />
 
           <nav className="panel grid gap-1 !p-3">
             {quickLinks.map((l) => (

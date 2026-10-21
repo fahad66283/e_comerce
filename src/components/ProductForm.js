@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useProducts } from "@/context/ProductsContext";
+import { deleteImages } from "@/lib/imageStore";
+import ImageUploader from "./ImageUploader";
 import ProductImage from "./ProductImage";
 
 const emptyProduct = {
@@ -15,6 +17,7 @@ const emptyProduct = {
   featured: false,
   isNew: true,
   description: "",
+  images: [],
 };
 
 export default function ProductForm({ product, onSave, onCancel }) {
@@ -25,6 +28,8 @@ export default function ProductForm({ product, onSave, onCancel }) {
       : { ...emptyProduct, category: categories[0]?.name ?? "" }
   );
   const [error, setError] = useState("");
+  // Images uploaded while this form is open, so unsaved ones can be removed on cancel.
+  const [uploaded, setUploaded] = useState([]);
 
   function update(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -38,6 +43,9 @@ export default function ProductForm({ product, onSave, onCancel }) {
       setError("The original price must be higher than the sale price, or left empty.");
       return;
     }
+    // Remove images that were taken out of the product (or uploaded then removed).
+    const kept = new Set(form.images);
+    deleteImages([...(product?.images ?? []), ...uploaded].filter((id) => !kept.has(id)));
     onSave({
       ...form,
       name: form.name.trim(),
@@ -56,6 +64,15 @@ export default function ProductForm({ product, onSave, onCancel }) {
 
       <div className="mt-6 grid gap-6 md:grid-cols-[1fr_200px]">
         <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <ImageUploader
+              label="Product Photos (up to 5)"
+              value={form.images}
+              onChange={(images) => update("images", images)}
+              onUploaded={(ids) => setUploaded((prev) => [...prev, ...ids])}
+              max={5}
+            />
+          </div>
           <label className="sm:col-span-2">
             <span className="field-label">Product Name</span>
             <input
@@ -129,7 +146,7 @@ export default function ProductForm({ product, onSave, onCancel }) {
             />
           </label>
           <label className="sm:col-span-2">
-            <span className="field-label">Emoji (image)</span>
+            <span className="field-label">Emoji (shown when there are no photos)</span>
             <input
               value={form.emoji}
               onChange={(e) => update("emoji", e.target.value)}
@@ -179,7 +196,14 @@ export default function ProductForm({ product, onSave, onCancel }) {
         <button type="submit" className="btn btn-primary">
           {product ? "Save Changes" : "Add Product"}
         </button>
-        <button type="button" onClick={onCancel} className="btn btn-outline">
+        <button
+          type="button"
+          onClick={() => {
+            deleteImages(uploaded);
+            onCancel();
+          }}
+          className="btn btn-outline"
+        >
           Cancel
         </button>
       </div>

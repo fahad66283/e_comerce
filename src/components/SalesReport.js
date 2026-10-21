@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useOrders } from "@/context/OrdersContext";
 import { useProducts } from "@/context/ProductsContext";
 import { formatPrice } from "@/data/products";
-import { PAYMENT_METHODS } from "@/data/store";
+import { useSettings } from "@/context/SettingsContext";
+import { PAYMENT_ICONS, shippingFor } from "@/data/siteContent";
 import StatusBadge from "./StatusBadge";
 
 const ranges = [
@@ -151,6 +152,7 @@ const demoCities = ["Lahore", "Karachi", "Islamabad", "Faisalabad", "Multan", "P
 export default function SalesReport() {
   const { orders, addOrders, removeDemoOrders } = useOrders();
   const { products } = useProducts();
+  const { settings } = useSettings();
   const [range, setRange] = useState(30);
   // "Now" is fixed when the report opens, so re-renders don't shift the date range.
   const [now] = useState(() => Date.now());
@@ -185,10 +187,14 @@ export default function SalesReport() {
   const categoryRows = Object.entries(byCategory)
     .map(([label, value]) => ({ label, value }))
     .sort((a, b) => b.value - a.value);
-  const paymentRows = PAYMENT_METHODS.map((m) => ({
-    label: `${m.icon} ${m.title}`,
-    value: inRange.filter((o) => o.payment.method === m.id).length,
-  })).filter((r) => r.value > 0);
+  const paymentCounts = {};
+  for (const o of inRange) {
+    const key = `${PAYMENT_ICONS[o.payment.method] ?? "💳"} ${o.payment.title}`;
+    paymentCounts[key] = (paymentCounts[key] ?? 0) + 1;
+  }
+  const paymentRows = Object.entries(paymentCounts)
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value);
   const statusCounts = ["Processing", "Shipped", "Delivered", "Cancelled"].map((s) => ({
     status: s,
     count: inRange.filter((o) => o.status === s).length,
@@ -231,9 +237,9 @@ export default function SalesReport() {
         return { id: p.id, name: p.name, price: p.price, emoji: p.emoji, category: p.category, quantity: 1 + Math.floor(Math.random() * 2) };
       });
       const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
-      const shipping = subtotal >= 5000 ? 0 : 250;
+      const shipping = shippingFor(subtotal, settings.shipping);
       const status = pick(["Delivered", "Delivered", "Delivered", "Shipped", "Processing", "Cancelled"]);
-      const method = pick(PAYMENT_METHODS.filter((m) => !m.disabled));
+      const method = pick(settings.payments.methods);
       const name = pick(demoNames);
       return {
         id: `DEMO-${String(n + 1).padStart(3, "0")}`,

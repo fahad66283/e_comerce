@@ -8,7 +8,8 @@ import { useCart } from "@/context/CartContext";
 import { useOrders } from "@/context/OrdersContext";
 import { useProducts } from "@/context/ProductsContext";
 import { formatPrice } from "@/data/products";
-import { PAYMENT_METHODS, getPaymentMethod } from "@/data/store";
+import { usePaymentMethods } from "@/context/SettingsContext";
+import { PAYMENT_ICONS } from "@/data/siteContent";
 import OrderSummary from "@/components/OrderSummary";
 
 const fields = [
@@ -29,13 +30,20 @@ export default function CheckoutPage() {
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState("");
 
-  const selected = getPaymentMethod(method);
+  const methods = usePaymentMethods();
+  // Falls back to the first enabled method if the chosen one was switched off.
+  const selected = methods.find((m) => m.id === method) ?? methods[0];
+  const isManual = selected?.details.length > 0;
 
   function handleSubmit(e) {
     e.preventDefault();
     const tooMany = items.find(({ quantity, product }) => quantity > product.stock);
     if (tooMany) {
       setError(`Only ${tooMany.product.stock} × ${tooMany.product.name} left in stock. Please update your cart.`);
+      return;
+    }
+    if (!selected) {
+      setError("No payment method is available right now. Please contact us.");
       return;
     }
     const form = new FormData(e.target);
@@ -47,6 +55,7 @@ export default function CheckoutPage() {
         name: product.name,
         price: product.price,
         emoji: product.emoji,
+        image: product.images?.[0] ?? null,
         category: product.category,
       })),
       subtotal,
@@ -59,7 +68,7 @@ export default function CheckoutPage() {
       payment: {
         method: selected.id,
         title: selected.title,
-        reference: selected.manual ? form.get("reference").trim() : null,
+        reference: isManual ? form.get("reference").trim() : null,
         status: "Pending",
       },
       customer: {
@@ -145,7 +154,7 @@ export default function CheckoutPage() {
           <section className="panel">
             <h3 className="mb-4 text-[1.05rem]">Payment Method</h3>
             <div className="grid gap-2.5">
-              {PAYMENT_METHODS.map((opt) => (
+              {[...methods, { id: "card", title: "Credit / Debit Card", text: "Coming soon", disabled: true }].map((opt) => (
                 <label
                   key={opt.id}
                   className={`flex items-center gap-3.5 rounded-field border-[1.5px] border-grey-200 px-[15px] py-[13px] transition has-[:checked]:border-ink has-[:checked]:bg-grey-50 ${
@@ -156,12 +165,12 @@ export default function CheckoutPage() {
                     type="radio"
                     name="payment"
                     value={opt.id}
-                    checked={method === opt.id}
+                    checked={selected?.id === opt.id}
                     onChange={() => setMethod(opt.id)}
                     disabled={opt.disabled}
                     className="accent-ink"
                   />
-                  <span className="w-8 text-center text-xl">{opt.icon}</span>
+                  <span className="w-8 text-center text-xl">{PAYMENT_ICONS[opt.id] ?? "💳"}</span>
                   <span>
                     <strong className="block text-[0.9rem]">{opt.title}</strong>
                     <span className="text-[0.76rem] text-grey-500">{opt.text}</span>
@@ -170,13 +179,13 @@ export default function CheckoutPage() {
               ))}
             </div>
 
-            {selected.manual && (
+            {isManual && (
               <div className="mt-4 rounded-field border border-grey-200 bg-grey-50 p-4">
                 <p className="text-sm font-bold">
                   Send {formatPrice(total)} to the account below, then enter your transaction ID:
                 </p>
                 <dl className="mt-2 grid gap-1 text-sm">
-                  {selected.details.map(([label, value]) => (
+                  {selected.details.map(({ label, value }) => (
                     <div key={label} className="flex justify-between gap-3">
                       <dt className="text-grey-500">{label}</dt>
                       <dd className="font-bold">{value}</dd>

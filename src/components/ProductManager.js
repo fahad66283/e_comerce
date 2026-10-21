@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { LOW_STOCK, useProducts } from "@/context/ProductsContext";
+import { useProducts } from "@/context/ProductsContext";
+import { useSettings } from "@/context/SettingsContext";
+import { collectImageIds, deleteImages } from "@/lib/imageStore";
 import { matchesSearch } from "@/lib/search";
 import { formatPrice } from "@/data/products";
 import ProductForm from "./ProductForm";
+import ProductImage from "./ProductImage";
 
-const filters = [
+const makeFilters = (lowStock) => [
   { key: "all", label: "All", test: () => true },
-  { key: "low", label: "Low stock", test: (p) => p.stock > 0 && p.stock <= LOW_STOCK },
+  { key: "low", label: "Low stock", test: (p) => p.stock > 0 && p.stock <= lowStock },
   { key: "out", label: "Out of stock", test: (p) => p.stock < 1 },
   { key: "featured", label: "Featured", test: (p) => p.featured },
   { key: "new", label: "New", test: (p) => p.isNew },
@@ -35,6 +38,9 @@ function Toggle({ on, label, onClick }) {
 // Products tab of the dashboard: add, edit, delete and reset listings.
 export default function ProductManager() {
   const { products, categories, addProduct, updateProduct, deleteProduct, resetProducts } = useProducts();
+  const { settings } = useSettings();
+  const lowStock = settings.inventory.lowStock;
+  const filters = makeFilters(lowStock);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   // null = no form, "new" = adding, otherwise the product being edited
@@ -55,12 +61,14 @@ export default function ProductManager() {
   function handleDelete(product) {
     if (!confirm(`Delete "${product.name}"? This cannot be undone.`)) return;
     deleteProduct(product.id);
+    deleteImages(product.images ?? []);
     if (editing?.id === product.id) setEditing(null);
     setMessage(`"${product.name}" was deleted.`);
   }
 
   function handleReset() {
     if (!confirm("Reset all products to the original list? Your changes will be lost.")) return;
+    deleteImages([...collectImageIds(products)]);
     resetProducts();
     setEditing(null);
     setMessage("Products were reset to the original list.");
@@ -162,9 +170,7 @@ export default function ProductManager() {
               <tr key={p.id} className="hover:bg-grey-50">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-xl">
-                      {p.emoji}
-                    </span>
+                    <ProductImage product={p} size="xs" />
                     <Link href={`/products/${p.id}`} className="font-bold hover:text-brand-700">
                       {p.name}
                     </Link>
@@ -180,7 +186,7 @@ export default function ProductManager() {
                 <td className="whitespace-nowrap px-4 py-3">
                   {p.stock < 1 ? (
                     <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-extrabold text-red-700">Out of stock</span>
-                  ) : p.stock <= LOW_STOCK ? (
+                  ) : p.stock <= lowStock ? (
                     <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-extrabold text-amber-800">
                       Low · {p.stock}
                     </span>

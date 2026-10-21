@@ -1,16 +1,18 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { whatsappLink } from "@/data/store";
+import { useSettings } from "@/context/SettingsContext";
+import { whatsappLink } from "@/data/siteContent";
 
 // Floating "chat on WhatsApp" button on every customer-facing page (not the admin dashboard).
 export default function WhatsAppButton() {
   const pathname = usePathname();
-  if (pathname.startsWith("/dashboard")) return null;
+  const { whatsapp, whatsappMessage } = useSettings().settings.contact;
+  if (!whatsapp || pathname.startsWith("/dashboard")) return null;
 
   return (
     <a
-      href={whatsappLink("Hi HAK Store! I have a question.")}
+      href={whatsappLink(whatsapp, whatsappMessage)}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat with us on WhatsApp"

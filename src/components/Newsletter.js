@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export default function Newsletter() {
+export default function Newsletter({ title, text }) {
   const [done, setDone] = useState(false);
 
   function handleSubmit(e) {
@@ -15,8 +15,8 @@ export default function Newsletter() {
   return (
     <div className="flex flex-col items-center justify-between gap-6 rounded-panel bg-ink p-8 text-center text-white sm:p-10 md:flex-row md:text-left">
       <div>
-        <h3 className="mb-1.5 text-xl text-white">Don&apos;t miss our deals</h3>
-        <p className="text-grey-400">Subscribe to our newsletter and get the latest offers first.</p>
+        <h3 className="mb-1.5 text-xl text-white">{title}</h3>
+        <p className="text-grey-400">{text}</p>
       </div>
       {done ? (
         <p className="font-bold text-brand-500">✓ Subscribed successfully!</p>

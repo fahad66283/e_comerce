@@ -1,20 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useOrders } from "@/context/OrdersContext";
-import { LOW_STOCK, useProducts } from "@/context/ProductsContext";
+import { useProducts } from "@/context/ProductsContext";
 import { useReviews } from "@/context/ReviewsContext";
+import { useSettings } from "@/context/SettingsContext";
 import { formatPrice } from "@/data/products";
 import CategoryManager from "./CategoryManager";
 import CouponManager from "./CouponManager";
+import DataManager from "./DataManager";
 import OrdersManager from "./OrdersManager";
 import ProductManager from "./ProductManager";
 import ReviewManager from "./ReviewManager";
 import SalesReport from "./SalesReport";
+import SettingsEditor from "./SettingsEditor";
+import UsersManager from "./UsersManager";
 
-const tabs = ["Overview", "Orders", "Products", "Categories", "Coupons", "Reviews", "Customers", "Reports"];
+const adminTabs = ["Overview", "Orders", "Products", "Categories", "Coupons", "Reviews", "Customers", "Reports"];
+// Only the super admin can edit the website, store settings and users.
+const superAdminTabs = ["Website", "Settings", "Users", "Backup"];
 
 function StatCard({ label, value }) {
   return (
@@ -45,7 +51,9 @@ function Alert({ tone, icon, children, action, onAction }) {
 }
 
 export default function AdminDashboard() {
-  const { isAdmin, hydrated, customers } = useAuth();
+  const { isAdmin, isSuperAdmin, hydrated, customers, user } = useAuth();
+  const { settings } = useSettings();
+  const lowStockAt = settings.inventory.lowStock;
   const { orders } = useOrders();
   const { products } = useProducts();
   const { reviews } = useReviews();
@@ -72,7 +80,7 @@ export default function AdminDashboard() {
   const pending = orders.filter((o) => o.status === "Processing");
   const toVerify = orders.filter((o) => o.payment.method !== "cod" && o.payment.status === "Pending" && o.status !== "Cancelled");
   const outOfStock = products.filter((p) => p.stock < 1);
-  const lowStock = products.filter((p) => p.stock > 0 && p.stock <= LOW_STOCK);
+  const lowStock = products.filter((p) => p.stock > 0 && p.stock <= lowStockAt);
 
   // Customers: registered accounts plus guests who ordered with another email.
   const registered = new Set(customers.map((c) => c.email));
@@ -93,25 +101,37 @@ export default function AdminDashboard() {
     <div className="container-page py-16">
       <div className="mb-8">
         <span className="eyebrow">Admin</span>
-        <h1 className="section-title">Dashboard</h1>
-        <p className="section-sub">Track sales and manage orders, products, categories and customers.</p>
+        <h1 className="section-title">{isSuperAdmin ? "Super Admin Dashboard" : "Dashboard"}</h1>
+        <p className="section-sub">
+          Welcome, {user.name}.{" "}
+          {isSuperAdmin
+            ? "Manage the store, edit every part of the website, and control who has access."
+            : "Track sales and manage orders, products, categories and customers."}
+        </p>
       </div>
 
-      <div role="tablist" className="mb-8 flex gap-2.5 overflow-x-auto pb-1.5 [scrollbar-width:none]">
-        {tabs.map((t) => (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            aria-selected={tab === t}
-            onClick={() => setTab(t)}
-            className={`pill ${tab === t ? "pill-active" : ""}`}
-          >
-            {t}
-            {badges[t] > 0 && (
-              <span className="rounded-full bg-red-500 px-2 text-xs font-extrabold text-white">{badges[t]}</span>
+      <div role="tablist" className="mb-8 flex items-center gap-2.5 overflow-x-auto pb-1.5 [scrollbar-width:none] lg:flex-wrap lg:overflow-visible">
+        {(isSuperAdmin ? [...adminTabs, ...superAdminTabs] : adminTabs).map((t) => (
+          <Fragment key={t}>
+            {t === superAdminTabs[0] && (
+              <span className="mx-1 flex shrink-0 items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-grey-400" aria-hidden="true">
+                <span className="h-6 w-px bg-grey-200" />
+                Super admin
+              </span>
             )}
-          </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === t}
+              onClick={() => setTab(t)}
+              className={`pill ${tab === t ? "pill-active" : ""}`}
+            >
+              {t}
+              {badges[t] > 0 && (
+                <span className="rounded-full bg-red-500 px-2 text-xs font-extrabold text-white">{badges[t]}</span>
+              )}
+            </button>
+          </Fragment>
         ))}
       </div>
 
@@ -130,7 +150,7 @@ export default function AdminDashboard() {
                 )}
                 {lowStock.length > 0 && (
                   <Alert tone="amber" icon="⚠️" action="View" onAction={() => setTab("Products")}>
-                    {lowStock.length} running low (≤ {LOW_STOCK} left):{" "}
+                    {lowStock.length} running low (≤ {lowStockAt} left):{" "}
                     {lowStock.map((p) => `${p.name} (${p.stock})`).join(", ")}
                   </Alert>
                 )}
@@ -186,6 +206,10 @@ export default function AdminDashboard() {
       {tab === "Coupons" && <CouponManager />}
       {tab === "Reviews" && <ReviewManager />}
       {tab === "Reports" && <SalesReport />}
+      {isSuperAdmin && tab === "Website" && <SettingsEditor group="website" />}
+      {isSuperAdmin && tab === "Settings" && <SettingsEditor group="settings" />}
+      {isSuperAdmin && tab === "Users" && <UsersManager />}
+      {isSuperAdmin && tab === "Backup" && <DataManager />}
 
       {tab === "Customers" && (
         <section>

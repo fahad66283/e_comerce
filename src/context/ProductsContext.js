@@ -9,8 +9,6 @@ import { createLocalStore } from "@/lib/localStore";
 const productsStore = createLocalStore("products", defaultProducts);
 const categoriesStore = createLocalStore("categories", defaultCategories);
 
-export const LOW_STOCK = 5;
-
 const ProductsContext = createContext(null);
 
 function slugify(text) {

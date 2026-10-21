@@ -18,7 +18,8 @@ export default function AuthForm({ mode }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const homeFor = (u) => (u.role === "admin" ? "/dashboard" : "/account");
+  const isStaff = (u) => u.role === "admin" || u.role === "superadmin";
+  const homeFor = (u) => (isStaff(u) ? "/dashboard" : "/account");
   const switchHref = (isSignup ? "/login" : "/signup") + (next ? `?next=${encodeURIComponent(next)}` : "");
 
   async function handleSubmit(e) {
@@ -26,6 +27,7 @@ export default function AuthForm({ mode }) {
     const form = new FormData(e.target);
     const email = form.get("email");
     const password = form.get("password");
+    setError("");
 
     if (isSignup && password !== form.get("confirm")) {
       setError("Passwords do not match.");
@@ -53,7 +55,7 @@ export default function AuthForm({ mode }) {
         <p className="mt-1 text-grey-500">{user.email}</p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link href={homeFor(user)} className="btn btn-primary">
-            {user.role === "admin" ? "Go to Dashboard" : "My Account"}
+            {isStaff(user) ? "Go to Dashboard" : "My Account"}
           </Link>
           <button type="button" onClick={logout} className="btn btn-outline">
             Logout
@@ -88,8 +90,15 @@ export default function AuthForm({ mode }) {
             </label>
           )}
           <label className="block">
-            <span className="field-label">Email</span>
-            <input required type="email" name="email" autoComplete="email" className="field-input" />
+            <span className="field-label">{isSignup ? "Email" : "Email or Username"}</span>
+            <input
+              required
+              type={isSignup ? "email" : "text"}
+              name="email"
+              autoComplete={isSignup ? "email" : "username"}
+              autoCapitalize="none"
+              className="field-input"
+            />
           </label>
           <label className="block">
             <span className="field-label">Password</span>

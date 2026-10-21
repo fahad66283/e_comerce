@@ -2,9 +2,10 @@
 
 import { createContext, useContext } from "react";
 import { createLocalStore, useHydrated } from "@/lib/localStore";
-import { getShipping } from "@/data/products";
+import { shippingFor } from "@/data/siteContent";
 import { evaluateCoupon, useCoupons } from "./CouponsContext";
 import { useProducts } from "./ProductsContext";
+import { useSettings } from "./SettingsContext";
 
 // Cart items are stored as [{ id, quantity }] in localStorage, plus the applied coupon code.
 const cartStore = createLocalStore("cart", []);
@@ -17,6 +18,7 @@ export function CartProvider({ children }) {
   const loaded = useHydrated();
   const { getProduct } = useProducts();
   const { findCoupon } = useCoupons();
+  const { settings } = useSettings();
   const couponCode = couponCodeStore.useValue();
 
   function addToCart(id, quantity = 1) {
@@ -68,7 +70,7 @@ export function CartProvider({ children }) {
   const couponResult = couponCode ? evaluateCoupon(findCoupon(couponCode), subtotal) : null;
   const discount = couponResult?.discount ?? 0;
   const couponError = couponResult?.error ?? null;
-  const shipping = getShipping(subtotal - discount);
+  const shipping = shippingFor(subtotal - discount, settings.shipping);
   const total = subtotal - discount + shipping;
 
   return (

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
-import { FREE_SHIPPING_MIN, formatPrice } from "@/data/products";
+import { useSettings } from "@/context/SettingsContext";
+import { formatPrice } from "@/data/products";
 
 function CouponBox() {
   const { couponCode, couponError, discount, applyCoupon, removeCoupon } = useCart();
@@ -60,6 +61,7 @@ function CouponBox() {
 
 export default function OrderSummary({ showItems = false, children }) {
   const { items, subtotal, discount, shipping, total } = useCart();
+  const { freeShippingMin } = useSettings().settings.shipping;
 
   return (
     <aside className="h-fit rounded-panel bg-ink p-[26px] text-white lg:sticky lg:top-24">
@@ -92,9 +94,9 @@ export default function OrderSummary({ showItems = false, children }) {
           <dt>Shipping</dt>
           <dd>{shipping === 0 ? "Free" : formatPrice(shipping)}</dd>
         </div>
-        {shipping > 0 && (
+        {shipping > 0 && freeShippingMin > 0 && (
           <p className="text-xs text-grey-500">
-            Add {formatPrice(FREE_SHIPPING_MIN - (subtotal - discount))} more for free shipping.
+            Add {formatPrice(freeShippingMin - (subtotal - discount))} more for free shipping.
           </p>
         )}
         <div className="mt-1.5 flex justify-between border-t border-[#2A2A2A] pt-3.5 text-[1.12rem] font-extrabold text-white">

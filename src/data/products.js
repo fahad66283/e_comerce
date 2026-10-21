@@ -163,11 +163,3 @@ export function getProduct(id) {
 export function formatPrice(amount) {
   return `Rs. ${amount.toLocaleString("en-PK")}`;
 }
-
-export const FREE_SHIPPING_MIN = 5000;
-export const SHIPPING_FEE = 250;
-
-export function getShipping(subtotal) {
-  return subtotal === 0 || subtotal >= FREE_SHIPPING_MIN ? 0 : SHIPPING_FEE;
-}
-

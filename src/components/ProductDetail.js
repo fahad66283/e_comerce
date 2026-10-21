@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useProducts } from "@/context/ProductsContext";
 import { useReviews } from "@/context/ReviewsContext";
-import { whatsappLink } from "@/data/store";
+import { useSettings } from "@/context/SettingsContext";
+import { whatsappLink } from "@/data/siteContent";
+import { Inline } from "./RichText";
 import { useHydrated } from "@/lib/localStore";
-import ProductImage from "./ProductImage";
+import ProductGallery from "./ProductGallery";
 import ProductActions from "./ProductActions";
 import ProductCard from "./ProductCard";
 import Price from "./Price";
@@ -17,6 +19,7 @@ export default function ProductDetail({ id }) {
   const { products, getProduct } = useProducts();
   const hydrated = useHydrated();
   const { getRating } = useReviews();
+  const { settings } = useSettings();
   const product = getProduct(id);
 
   if (!product) {
@@ -48,7 +51,7 @@ export default function ProductDetail({ id }) {
       </nav>
 
       <div className="mt-6 grid items-start gap-10 md:grid-cols-2">
-        <ProductImage product={product} size="lg" />
+        <ProductGallery product={product} />
 
         <div className="md:py-4">
           <span className="text-[0.75rem] font-extrabold uppercase tracking-wide text-brand-700">
@@ -77,21 +80,30 @@ export default function ProductDetail({ id }) {
 
           <div className="mt-4 flex flex-wrap gap-3">
             <WishlistButton product={product} withLabel className="btn btn-outline btn-sm" />
-            <a
-              href={whatsappLink(`Hi HAK Store! I'd like to order: ${product.name} (${product.id})`)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-sm bg-[#25D366] text-white hover:bg-[#1ebe5b]"
-            >
-              Order on WhatsApp
-            </a>
+            {settings.contact.whatsapp && (
+              <a
+                href={whatsappLink(
+                  settings.contact.whatsapp,
+                  `Hi ${settings.general.storeName}! I'd like to order: ${product.name} (${product.id})`
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-sm bg-[#25D366] text-white hover:bg-[#1ebe5b]"
+              >
+                Order on WhatsApp
+              </a>
+            )}
           </div>
 
-          <ul className="mt-8 grid gap-2 border-t border-grey-200 pt-6 text-sm text-grey-700">
-            <li>🚚 Free shipping on orders over Rs. 5,000</li>
-            <li>🔄 7-day easy returns</li>
-            <li>💵 Cash on delivery available</li>
-          </ul>
+          {settings.productPage.highlights.length > 0 && (
+            <ul className="mt-8 grid gap-2 border-t border-grey-200 pt-6 text-sm text-grey-700">
+              {settings.productPage.highlights.map((h, i) => (
+                <li key={i}>
+                  <Inline text={h} />
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
