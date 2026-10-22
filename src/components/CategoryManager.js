@@ -18,10 +18,10 @@ export default function CategoryManager() {
     setMessage({ text: "", error: false });
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const data = { name: form.name.trim(), icon: form.icon.trim() || "🛍️", description: form.description.trim() };
-    const result = editing === "new" ? addCategory(data) : updateCategory(editing.name, data);
+    const result = editing === "new" ? await addCategory(data) : await updateCategory(editing.name, data);
     if (result.error) {
       setMessage({ text: result.error, error: true });
       return;
@@ -30,17 +30,17 @@ export default function CategoryManager() {
     setEditing(null);
   }
 
-  function handleDelete(category) {
+  async function handleDelete(category) {
     if (!confirm(`Delete the "${category.name}" category?`)) return;
-    const result = deleteCategory(category.name);
+    const result = await deleteCategory(category.name);
     setMessage(result.error ? { text: result.error, error: true } : { text: `"${category.name}" was deleted.`, error: false });
   }
 
-  function handleReset() {
-    if (!confirm("Reset categories to the original list? Products in removed categories keep their category name.")) return;
-    resetCategories();
+  async function handleReset() {
+    if (!confirm("Restore the original categories? Extra categories without products are removed.")) return;
+    const result = await resetCategories();
     setEditing(null);
-    setMessage({ text: "Categories were reset.", error: false });
+    setMessage(result.error ? { text: result.error, error: true } : { text: "Categories were reset.", error: false });
   }
 
   return (

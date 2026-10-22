@@ -1,15 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { formatDate } from "@/context/OrdersContext";
-import { useProducts } from "@/context/ProductsContext";
-import { useReviews } from "@/context/ReviewsContext";
+import { useRouter } from "next/navigation";
+import { api, useApiData } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 import { Stars } from "./Stars";
 
 // Reviews tab: see all customer reviews and remove inappropriate ones.
 export default function ReviewManager() {
-  const { reviews, deleteReview } = useReviews();
-  const { getProduct } = useProducts();
+  const { data, reload } = useApiData("/api/admin/reviews");
+  const router = useRouter();
+  const reviews = data?.reviews ?? [];
+
+  async function remove(id) {
+    if (!confirm("Delete this review?")) return;
+    await api("/api/admin/reviews", { method: "DELETE", body: { id } }).catch(() => {});
+    reload();
+    router.refresh(); // update average ratings
+  }
   const average = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
 
   return (
@@ -27,7 +35,7 @@ export default function ReviewManager() {
       ) : (
         <ul className="mt-6 grid gap-4">
           {reviews.map((r) => {
-            const product = getProduct(r.productId);
+            const product = r.product;
             return (
               <li key={r.id} className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
@@ -51,7 +59,7 @@ export default function ReviewManager() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => confirm("Delete this review?") && deleteReview(r.id)}
+                  onClick={() => remove(r.id)}
                   className="btn btn-outline btn-sm shrink-0"
                 >
                   Delete

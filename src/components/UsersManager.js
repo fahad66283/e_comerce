@@ -2,8 +2,8 @@
 
 import { Fragment, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useOrders } from "@/context/OrdersContext";
-import { ROLE_LABELS } from "@/data/accounts";
+import { ROLE_LABELS } from "@/data/roles";
+import { api, useApiData } from "@/lib/api";
 
 const roleStyles = {
   superadmin: "bg-ink text-white",
@@ -13,8 +13,9 @@ const roleStyles = {
 
 // Super admin: add admins/customers, change roles, disable accounts, set passwords.
 export default function UsersManager() {
-  const { accounts, user, adminCreateUser, adminUpdateUser, adminSetPassword, adminDeleteUser } = useAuth();
-  const { orders } = useOrders();
+  const { user } = useAuth();
+  const { data, reload, error: loadError } = useApiData("/api/admin/users");
+  const accounts = data?.users ?? [];
   const [adding, setAdding] = useState(false);
   const [passwordFor, setPasswordFor] = useState(null);
   const [message, setMessage] = useState({ text: "", error: false });
@@ -24,41 +25,44 @@ export default function UsersManager() {
   const show = (text, error = false) => setMessage({ text, error });
   const list = accounts.filter((a) => filter === "all" || (filter === "staff" ? a.role !== "customer" : a.role === "customer"));
 
+  // Runs an API call and shows its result; returns true when it worked.
+  async function run(action, done) {
+    setBusy(true);
+    try {
+      await action();
+      show(done);
+      return true;
+    } catch (err) {
+      show(err.message, true);
+      return false;
+    } finally {
+      setBusy(false);
+      reload();
+    }
+  }
+
   async function handleAdd(e) {
     e.preventDefault();
     const form = new FormData(e.target);
-    setBusy(true);
-    const result = await adminCreateUser({
-      name: form.get("name"),
-      email: form.get("email"),
-      password: form.get("password"),
-      role: form.get("role"),
-    });
-    setBusy(false);
-    if (result.error) return show(result.error, true);
-    show(`${result.user.name} was added as ${ROLE_LABELS[result.user.role]}.`);
-    setAdding(false);
+    const body = { name: form.get("name"), email: form.get("email"), password: form.get("password"), role: form.get("role") };
+    const worked = await run(() => api("/api/admin/users", { method: "POST", body }), `${body.name} was added as ${ROLE_LABELS[body.role]}.`);
+    if (worked) setAdding(false);
   }
 
-  async function handlePassword(e, email) {
+  async function handlePassword(e, account) {
     e.preventDefault();
-    setBusy(true);
-    const result = await adminSetPassword(email, new FormData(e.target).get("password"));
-    setBusy(false);
-    if (result.error) return show(result.error, true);
-    show("Password updated.");
-    setPasswordFor(null);
+    const password = new FormData(e.target).get("password");
+    const worked = await run(() => api(`/api/admin/users/${account.id}/password`, { method: "POST", body: { password } }), "Password updated.");
+    if (worked) setPasswordFor(null);
   }
 
-  function update(email, changes, done) {
-    const result = adminUpdateUser(email, changes);
-    show(result.error ?? done, !!result.error);
+  function update(account, changes, done) {
+    run(() => api(`/api/admin/users/${account.id}`, { method: "PATCH", body: changes }), done);
   }
 
   function remove(account) {
     if (!confirm(`Delete ${account.name} (${account.email})? Their past orders are kept.`)) return;
-    const result = adminDeleteUser(account.email);
-    show(result.error ?? `${account.name} was deleted.`, !!result.error);
+    run(() => api(`/api/admin/users/${account.id}`, { method: "DELETE" }), `${account.name} was deleted.`);
   }
 
   return (
@@ -72,6 +76,10 @@ export default function UsersManager() {
           + Add User
         </button>
       </div>
+
+      {loadError && (
+        <p role="alert" className="mt-6 rounded-field bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{loadError}</p>
+      )}
 
       {message.text && (
         <p role="status" className={`mt-6 rounded-field px-4 py-3 text-sm font-bold ${message.error ? "bg-red-50 text-red-700" : "bg-brand-100 text-brand-700"}`}>
@@ -140,7 +148,7 @@ export default function UsersManager() {
               const isSelf = a.email === user.email;
               const isSuper = a.role === "superadmin";
               return (
-                <Fragment key={a.email}>
+                <Fragment key={a.id}>
                   <tr className="align-middle hover:bg-grey-50">
                     <td className="px-4 py-3">
                       <p className="font-bold">
@@ -152,15 +160,15 @@ export default function UsersManager() {
                       </p>
                     </td>
                     <td className="px-4 py-3">
-                      {isSuper || a.builtIn ? (
+                      {isSuper ? (
                         <span className={`rounded-full px-2.5 py-1 text-xs font-extrabold ${roleStyles[a.role]}`}>
                           {ROLE_LABELS[a.role]}
-                          {a.builtIn && " · built-in"}
+
                         </span>
                       ) : (
                         <select
                           value={a.role}
-                          onChange={(e) => update(a.email, { role: e.target.value }, `${a.name} is now ${ROLE_LABELS[e.target.value]}.`)}
+                          onChange={(e) => update(a, { role: e.target.value }, `${a.name} is now ${ROLE_LABELS[e.target.value]}.`)}
                           aria-label={`Role of ${a.name}`}
                           className="rounded-full border-[1.5px] border-grey-200 bg-white px-3 py-1.5 text-sm font-bold outline-none focus:border-ink"
                         >
@@ -169,7 +177,7 @@ export default function UsersManager() {
                         </select>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-grey-500">{orders.filter((o) => o.customer.email === a.email).length}</td>
+                    <td className="px-4 py-3 text-grey-500">{a.orders}</td>
                     <td className="px-4 py-3">
                       {isSuper ? (
                         <span className="text-xs font-bold text-brand-700">Active</span>
@@ -178,7 +186,7 @@ export default function UsersManager() {
                           type="button"
                           onClick={() =>
                             update(
-                              a.email,
+                              a,
                               { status: a.status === "disabled" ? "active" : "disabled" },
                               `${a.name} was ${a.status === "disabled" ? "enabled" : "disabled"}.`
                             )
@@ -192,21 +200,21 @@ export default function UsersManager() {
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">
                       {(!isSuper || isSelf) && (
-                        <button type="button" onClick={() => setPasswordFor(passwordFor === a.email ? null : a.email)} className="mr-3 font-bold hover:text-brand-700 hover:underline">
+                        <button type="button" onClick={() => setPasswordFor(passwordFor === a.id ? null : a.id)} className="mr-3 font-bold hover:text-brand-700 hover:underline">
                           Set password
                         </button>
                       )}
-                      {!a.builtIn && (
+                      {!isSuper && (
                         <button type="button" onClick={() => remove(a)} className="font-bold text-red-600 hover:underline">
                           Delete
                         </button>
                       )}
                     </td>
                   </tr>
-                  {passwordFor === a.email && (
+                  {passwordFor === a.id && (
                     <tr className="bg-grey-50">
                       <td colSpan={5} className="px-4 py-3">
-                        <form onSubmit={(e) => handlePassword(e, a.email)} className="flex flex-wrap items-end gap-3">
+                        <form onSubmit={(e) => handlePassword(e, a)} className="flex flex-wrap items-end gap-3">
                           <label className="min-w-[220px] flex-1">
                             <span className="field-label">New password for {a.name}</span>
                             <input required type="password" name="password" minLength={6} autoComplete="new-password" className="field-input" />

@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useSettings } from "@/context/SettingsContext";
-import { collectImageIds, deleteImages } from "@/lib/imageStore";
+import { defaultSettings } from "@/data/siteContent";
+import { deleteUploads } from "@/lib/api";
+import { collectImageUrls } from "@/lib/imageStore";
 import ImageUploader from "./ImageUploader";
 import { SECTIONS } from "./settingsSections";
 
@@ -188,55 +190,77 @@ function ListField({ field, value, onChange, onUploaded }) {
 
 // Super admin editor for one group of sections ("website" content or store "settings").
 export default function SettingsEditor({ group }) {
-  const { rawSettings: settings, saved, saveSection, resetSection } = useSettings();
+  const { rawSettings: settings, saveSection, resetSection } = useSettings();
   const sections = SECTIONS.filter((s) => s.group === group);
   const [active, setActive] = useState(sections[0].key);
   const [draft, setDraft] = useState(null); // null = no unsaved changes
   const [uploaded, setUploaded] = useState([]);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState({ text: "", error: false });
+  const [busy, setBusy] = useState(false);
+  // After saving, keep showing the saved values until the refreshed data arrives from the server.
+  const [savedBase, setSavedBase] = useState(null);
+  if (savedBase && settings[active] !== savedBase) {
+    setSavedBase(null);
+    setDraft(null);
+  }
 
   const section = sections.find((s) => s.key === active);
   const value = draft ?? settings[active];
-  const dirty = draft !== null;
+  const dirty = draft !== null && !savedBase;
+  const customized = (key) => JSON.stringify(settings[key]) !== JSON.stringify(defaultSettings[key]);
 
   function choose(key) {
     if (key === active) return;
     if (dirty && !confirm("You have unsaved changes. Discard them?")) return;
-    deleteImages(uploaded);
+    deleteUploads(uploaded);
     setUploaded([]);
     setDraft(null);
-    setMessage("");
+    setSavedBase(null);
+    setMessage({ text: "", error: false });
     setActive(key);
   }
 
   function change(name, v) {
     setDraft({ ...value, [name]: v });
-    setMessage("");
+    setSavedBase(null);
+    setMessage({ text: "", error: false });
   }
 
-  function save() {
-    const kept = collectImageIds(draft);
-    deleteImages([...collectImageIds(settings[active]), ...uploaded].filter((id) => !kept.has(id)));
-    saveSection(active, draft);
-    setDraft(null);
-    setUploaded([]);
-    setMessage(`✓ ${section.title} saved. Changes are live on the site.`);
+  async function save() {
+    setBusy(true);
+    try {
+      await saveSection(active, draft);
+      const kept = collectImageUrls(draft);
+      deleteUploads([...collectImageUrls(settings[active]), ...uploaded].filter((url) => !kept.has(url)));
+      setUploaded([]);
+      setSavedBase(settings[active]);
+      setMessage({ text: `✓ ${section.title} saved. Changes are live on the site.`, error: false });
+    } catch (err) {
+      setMessage({ text: err.message, error: true });
+    }
+    setBusy(false);
   }
 
   function discard() {
-    deleteImages(uploaded);
+    deleteUploads(uploaded);
     setUploaded([]);
     setDraft(null);
-    setMessage("");
+    setMessage({ text: "", error: false });
   }
 
-  function reset() {
+  async function reset() {
     if (!confirm(`Reset "${section.title}" to the original content? Your changes in this section will be lost.`)) return;
-    deleteImages([...collectImageIds(settings[active]), ...uploaded]);
-    resetSection(active);
-    setDraft(null);
-    setUploaded([]);
-    setMessage(`${section.title} was reset to the original content.`);
+    setBusy(true);
+    try {
+      await resetSection(active);
+      deleteUploads([...collectImageUrls(settings[active]), ...uploaded]);
+      setDraft(null);
+      setUploaded([]);
+      setMessage({ text: `${section.title} was reset to the original content.`, error: false });
+    } catch (err) {
+      setMessage({ text: err.message, error: true });
+    }
+    setBusy(false);
   }
 
   return (
@@ -251,7 +275,7 @@ export default function SettingsEditor({ group }) {
             className={`pill justify-between lg:w-full lg:rounded-field ${s.key === active ? "pill-active" : ""}`}
           >
             {s.title}
-            {saved[s.key] !== undefined && (
+            {customized(s.key) && (
               <span className={`h-2 w-2 shrink-0 rounded-full ${s.key === active ? "bg-brand-500" : "bg-brand-600"}`} title="Customized" />
             )}
           </button>
@@ -294,22 +318,25 @@ export default function SettingsEditor({ group }) {
           ))}
         </div>
 
-        {message && (
-          <p role="status" className="mt-5 rounded-field bg-brand-100 px-4 py-3 text-sm font-bold text-brand-700">
-            {message}
+        {message.text && (
+          <p
+            role="status"
+            className={`mt-5 rounded-field px-4 py-3 text-sm font-bold ${message.error ? "bg-red-50 text-red-700" : "bg-brand-100 text-brand-700"}`}
+          >
+            {message.text}
           </p>
         )}
 
         <div className="sticky bottom-0 -mx-6 mt-6 flex flex-wrap items-center gap-3 border-t border-grey-200 bg-white px-6 py-4 sm:-mx-[30px] sm:px-[30px]">
-          <button type="submit" disabled={!dirty} className="btn btn-primary">
-            Save Changes
+          <button type="submit" disabled={!dirty || busy} className="btn btn-primary">
+            {busy ? "Saving..." : "Save Changes"}
           </button>
-          <button type="button" onClick={discard} disabled={!dirty} className="btn btn-outline">
+          <button type="button" onClick={discard} disabled={!dirty || busy} className="btn btn-outline">
             Discard
           </button>
           <span className="flex-1" />
           {dirty && <span className="text-sm font-bold text-amber-700">Unsaved changes</span>}
-          <button type="button" onClick={reset} disabled={saved[active] === undefined && !dirty} className="text-sm font-bold text-grey-500 hover:text-red-600 disabled:opacity-40">
+          <button type="button" onClick={reset} disabled={busy || (!customized(active) && !dirty)} className="text-sm font-bold text-grey-500 hover:text-red-600 disabled:opacity-40">
             Reset to default
           </button>
         </div>

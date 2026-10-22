@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { useProducts } from "@/context/ProductsContext";
 import { useSettings } from "@/context/SettingsContext";
-import { collectImageIds, deleteImages } from "@/lib/imageStore";
 import { matchesSearch } from "@/lib/search";
 import { formatPrice } from "@/data/products";
 import ProductForm from "./ProductForm";
@@ -37,7 +36,7 @@ function Toggle({ on, label, onClick }) {
 
 // Products tab of the dashboard: add, edit, delete and reset listings.
 export default function ProductManager() {
-  const { products, categories, addProduct, updateProduct, deleteProduct, resetProducts } = useProducts();
+  const { products, categories, addProduct, updateProduct, setProductFlags, deleteProduct, resetProducts } = useProducts();
   const { settings } = useSettings();
   const lowStock = settings.inventory.lowStock;
   const filters = makeFilters(lowStock);
@@ -45,33 +44,44 @@ export default function ProductManager() {
   const [filter, setFilter] = useState("all");
   // null = no form, "new" = adding, otherwise the product being edited
   const [editing, setEditing] = useState(null);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState({ text: "", error: false });
+  const show = (text, error = false) => setMessage({ text, error });
 
-  function handleSave(data) {
+  // Saving errors are shown inside the form (it stays open).
+  async function handleSave(data) {
     if (editing === "new") {
-      addProduct(data);
-      setMessage(`"${data.name}" was added.`);
+      await addProduct(data);
+      show(`"${data.name}" was added.`);
     } else {
-      updateProduct(editing.id, data);
-      setMessage(`"${data.name}" was updated.`);
+      await updateProduct(editing.id, data);
+      show(`"${data.name}" was updated.`);
     }
     setEditing(null);
   }
 
+  async function run(action, done) {
+    try {
+      await action();
+      show(done);
+    } catch (err) {
+      show(err.message, true);
+    }
+  }
+
   function handleDelete(product) {
     if (!confirm(`Delete "${product.name}"? This cannot be undone.`)) return;
-    deleteProduct(product.id);
-    deleteImages(product.images ?? []);
     if (editing?.id === product.id) setEditing(null);
-    setMessage(`"${product.name}" was deleted.`);
+    run(() => deleteProduct(product.id), `"${product.name}" was deleted.`);
   }
 
   function handleReset() {
-    if (!confirm("Reset all products to the original list? Your changes will be lost.")) return;
-    deleteImages([...collectImageIds(products)]);
-    resetProducts();
+    if (!confirm("Reset all products to the original list? Your products and their photos will be replaced.")) return;
     setEditing(null);
-    setMessage("Products were reset to the original list.");
+    run(resetProducts, "Products were reset to the original list.");
+  }
+
+  function toggleFlag(product, flag) {
+    run(() => setProductFlags(product.id, { [flag]: !product[flag] }), `"${product.name}" was updated.`);
   }
 
   const activeFilter = filters.find((f) => f.key === filter);
@@ -112,9 +122,12 @@ export default function ProductManager() {
         ))}
       </div>
 
-      {message && (
-        <p role="status" className="mt-6 rounded-field bg-brand-100 px-4 py-3 text-sm font-bold text-brand-700">
-          {message}
+      {message.text && (
+        <p
+          role="status"
+          className={`mt-6 rounded-field px-4 py-3 text-sm font-bold ${message.error ? "bg-red-50 text-red-700" : "bg-brand-100 text-brand-700"}`}
+        >
+          {message.text}
         </p>
       )}
 
@@ -195,10 +208,10 @@ export default function ProductManager() {
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <Toggle on={p.featured} label={`Featured: ${p.name}`} onClick={() => updateProduct(p.id, { ...p, featured: !p.featured })} />
+                  <Toggle on={p.featured} label={`Featured: ${p.name}`} onClick={() => toggleFlag(p, "featured")} />
                 </td>
                 <td className="px-4 py-3">
-                  <Toggle on={p.isNew} label={`New arrival: ${p.name}`} onClick={() => updateProduct(p.id, { ...p, isNew: !p.isNew })} />
+                  <Toggle on={p.isNew} label={`New arrival: ${p.name}`} onClick={() => toggleFlag(p, "isNew")} />
                 </td>
                 <td className="px-4 py-3 text-right">
                   <button

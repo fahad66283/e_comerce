@@ -1,103 +1,44 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { createContext, useContext } from "react";
-import { defaultCategories, products as defaultProducts } from "@/data/products";
-import { createLocalStore } from "@/lib/localStore";
+import { api } from "@/lib/api";
 
-// Listings and categories start from the static catalog. Admin changes are saved in
-// this browser's localStorage until a real backend/database is added.
-const productsStore = createLocalStore("products", defaultProducts);
-const categoriesStore = createLocalStore("categories", defaultCategories);
-
+// Products and categories from MySQL. Admin changes go through the API, then the page data refreshes.
 const ProductsContext = createContext(null);
 
-function slugify(text) {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
+export function ProductsProvider({ products, categories, children }) {
+  const router = useRouter();
 
-export function ProductsProvider({ children }) {
-  const products = productsStore.useValue();
-  const categories = categoriesStore.useValue();
+  const getProduct = (id) => products.find((p) => p.id === id);
+  const getCategory = (name) => categories.find((c) => c.name === name);
 
-  function getProduct(id) {
-    return products.find((p) => p.id === id);
+  async function change(path, method, body) {
+    const data = await api(path, { method, body });
+    router.refresh();
+    return data;
   }
 
-  function getCategory(name) {
-    return categories.find((c) => c.name === name);
-  }
+  // Products: these throw an Error with a readable message if something fails.
+  const addProduct = async (data) => (await change("/api/admin/products", "POST", data)).id;
+  const updateProduct = (id, data) => change(`/api/admin/products/${encodeURIComponent(id)}`, "PUT", data);
+  const setProductFlags = (id, flags) => change(`/api/admin/products/${encodeURIComponent(id)}`, "PATCH", flags);
+  const deleteProduct = (id) => change(`/api/admin/products/${encodeURIComponent(id)}`, "DELETE");
+  const resetProducts = () => change("/api/admin/products/reset", "POST");
 
-  // ---- Products ----
-  function addProduct(data) {
-    const base = slugify(data.name) || "product";
-    let id = base;
-    for (let n = 2; products.some((p) => p.id === id); n++) id = `${base}-${n}`;
-    productsStore.set((prev) => [...prev, { ...data, id }]);
-    return id;
-  }
-
-  function updateProduct(id, data) {
-    productsStore.set((prev) => prev.map((p) => (p.id === id ? { ...data, id } : p)));
-  }
-
-  function deleteProduct(id) {
-    productsStore.set((prev) => prev.filter((p) => p.id !== id));
-  }
-
-  // Called when an order is placed: [{ id, quantity }]
-  function reduceStock(items) {
-    productsStore.set((prev) =>
-      prev.map((p) => {
-        const item = items.find((i) => i.id === p.id);
-        return item ? { ...p, stock: Math.max(0, p.stock - item.quantity) } : p;
-      })
-    );
-  }
-
-  function resetProducts() {
-    productsStore.reset();
-  }
-
-  // ---- Categories ----
-  function addCategory(data) {
-    if (categories.some((c) => c.name.toLowerCase() === data.name.toLowerCase())) {
-      return { error: `A category called "${data.name}" already exists.` };
+  // Categories: these return { error } instead of throwing.
+  async function safe(fn) {
+    try {
+      await fn();
+      return {};
+    } catch (err) {
+      return { error: err.message };
     }
-    categoriesStore.set((prev) => [...prev, data]);
-    return {};
   }
-
-  // Renaming a category also moves its products to the new name.
-  function updateCategory(oldName, data) {
-    const clash = categories.some(
-      (c) => c.name !== oldName && c.name.toLowerCase() === data.name.toLowerCase()
-    );
-    if (clash) return { error: `A category called "${data.name}" already exists.` };
-    categoriesStore.set((prev) => prev.map((c) => (c.name === oldName ? data : c)));
-    if (data.name !== oldName) {
-      productsStore.set((prev) =>
-        prev.map((p) => (p.category === oldName ? { ...p, category: data.name } : p))
-      );
-    }
-    return {};
-  }
-
-  function deleteCategory(name) {
-    const count = products.filter((p) => p.category === name).length;
-    if (count > 0) {
-      return { error: `"${name}" still has ${count} product(s). Move or delete them first.` };
-    }
-    categoriesStore.set((prev) => prev.filter((c) => c.name !== name));
-    return {};
-  }
-
-  function resetCategories() {
-    categoriesStore.reset();
-  }
+  const addCategory = (data) => safe(() => change("/api/admin/categories", "POST", data));
+  const updateCategory = (originalName, data) => safe(() => change("/api/admin/categories", "PUT", { ...data, originalName }));
+  const deleteCategory = (name) => safe(() => change("/api/admin/categories", "DELETE", { name }));
+  const resetCategories = () => safe(() => change("/api/admin/categories/reset", "POST"));
 
   return (
     <ProductsContext.Provider
@@ -108,8 +49,8 @@ export function ProductsProvider({ children }) {
         getCategory,
         addProduct,
         updateProduct,
+        setProductFlags,
         deleteProduct,
-        reduceStock,
         resetProducts,
         addCategory,
         updateCategory,

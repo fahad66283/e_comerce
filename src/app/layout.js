@@ -1,9 +1,7 @@
 import { Tajawal } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Providers from "@/components/Providers";
-import WhatsAppButton from "@/components/WhatsAppButton";
-import Footer from "@/components/Footer";
+import StoreShell, { StoreLoading } from "@/components/StoreShell";
 
 const tajawal = Tajawal({
   variable: "--font-tajawal",
@@ -28,12 +26,10 @@ export default function RootLayout({ children }) {
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col font-sans">
-        <Providers>
-          <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <WhatsAppButton />
-        </Providers>
+        {/* Store data (products, settings, login) is read from MySQL for every request. */}
+        <Suspense fallback={<StoreLoading />}>
+          <StoreShell>{children}</StoreShell>
+        </Suspense>
       </body>
     </html>
   );

@@ -11,14 +11,14 @@ const sizes = {
 };
 
 export default function ProductImage({ product, size = "md", imageId, children }) {
-  const id = imageId ?? product.images?.[0];
+  const src = imageId ?? product.images?.[0];
   const emoji = <span aria-hidden="true">{product.emoji}</span>;
   return (
     <div className={`relative flex shrink-0 items-center justify-center overflow-hidden bg-brand-50 ${sizes[size]}`}>
       {children}
-      {id ? (
+      {src ? (
         <StoredImage
-          id={id}
+          src={src}
           alt={product.name}
           className="h-full w-full object-cover"
           fallback={emoji}

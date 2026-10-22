@@ -1,15 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import { api } from "@/lib/api";
 
 export default function Newsletter({ title, text }) {
   const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    // Static demo: the email is not saved anywhere yet.
-    e.target.reset();
-    setDone(true);
+    const formElement = e.target;
+    try {
+      await api("/api/newsletter", { method: "POST", body: { email: new FormData(formElement).get("email") } });
+      formElement.reset();
+      setDone(true);
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   return (
@@ -23,6 +30,7 @@ export default function Newsletter({ title, text }) {
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-wrap justify-center gap-2.5">
           <input
+            name="email"
             type="email"
             required
             placeholder="Your email address"
@@ -32,6 +40,7 @@ export default function Newsletter({ title, text }) {
           <button type="submit" className="btn btn-primary">
             Subscribe
           </button>
+          {error && <p className="w-full text-sm font-bold text-amber-400">{error}</p>}
         </form>
       )}
     </div>

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useWishlist } from "@/context/WishlistContext";
+import { claimGuestOrders } from "@/lib/guestOrders";
 
 // Only allow redirects to pages on this site (e.g. "/account"), never other websites.
 function safeNext(value) {
@@ -13,6 +15,7 @@ function safeNext(value) {
 export default function AuthForm({ mode }) {
   const isSignup = mode === "signup";
   const { user, login, register, logout } = useAuth();
+  const { mergeGuestWishlist } = useWishlist();
   const router = useRouter();
   const next = safeNext(useSearchParams().get("next"));
   const [error, setError] = useState("");
@@ -44,7 +47,9 @@ export default function AuthForm({ mode }) {
       setError(result.error);
       return;
     }
+    await Promise.all([mergeGuestWishlist(), claimGuestOrders()]);
     router.push(next ?? homeFor(result.user));
+    router.refresh();
   }
 
   if (user) {

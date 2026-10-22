@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
-import { useOrders } from "@/context/OrdersContext";
 import { useProducts } from "@/context/ProductsContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -69,17 +68,16 @@ function UserMenu({ user, isAdmin, onLogout }) {
 export default function Navbar() {
   const { count } = useCart();
   const { count: wishCount } = useWishlist();
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAdmin, logout, adminSummary } = useAuth();
   const { products } = useProducts();
-  const { orders } = useOrders();
   const { settings } = useSettings();
   const pathname = usePathname();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  // Admin alerts: new orders to process + products running low.
+  // Admin alerts: new orders to process + products running low + unread messages.
   const alerts = isAdmin
-    ? orders.filter((o) => o.status === "Processing").length +
+    ? adminSummary.pendingOrders +
+      adminSummary.unreadMessages +
       products.filter((p) => p.stock <= settings.inventory.lowStock).length
     : 0;
   const navLinks = isAdmin ? [...links, { href: "/dashboard", label: "Dashboard", alerts }] : links;
@@ -87,9 +85,8 @@ export default function Navbar() {
   const isActive = (href) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   function handleLogout() {
-    logout();
     close();
-    router.push("/");
+    logout();
   }
 
   return (

@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useOrders } from "@/context/OrdersContext";
 import { useProducts } from "@/context/ProductsContext";
 import { formatPrice } from "@/data/products";
-import { useSettings } from "@/context/SettingsContext";
-import { PAYMENT_ICONS, shippingFor } from "@/data/siteContent";
+import { PAYMENT_ICONS } from "@/data/siteContent";
+import { api } from "@/lib/api";
 import StatusBadge from "./StatusBadge";
 
 const ranges = [
@@ -146,13 +145,8 @@ function BarList({ rows, format = formatPrice }) {
   );
 }
 
-const demoNames = ["Ayesha Malik", "Bilal Ahmed", "Sana Riaz", "Usman Tariq", "Hira Shah", "Zain Ali", "Fatima Noor", "Hamza Iqbal"];
-const demoCities = ["Lahore", "Karachi", "Islamabad", "Faisalabad", "Multan", "Peshawar"];
-
-export default function SalesReport() {
-  const { orders, addOrders, removeDemoOrders } = useOrders();
+export default function SalesReport({ orders, onChange }) {
   const { products } = useProducts();
-  const { settings } = useSettings();
   const [range, setRange] = useState(30);
   // "Now" is fixed when the report opens, so re-renders don't shift the date range.
   const [now] = useState(() => Date.now());
@@ -227,43 +221,20 @@ export default function SalesReport() {
     URL.revokeObjectURL(url);
   }
 
-  function generateDemo() {
-    const today = Date.now();
-    const pick = (list) => list[Math.floor(Math.random() * list.length)];
-    const list = Array.from({ length: 40 }, (_, n) => {
-      const created = new Date(today - Math.random() * 30 * DAY);
-      const items = Array.from({ length: 1 + Math.floor(Math.random() * 3) }, () => {
-        const p = pick(products);
-        return { id: p.id, name: p.name, price: p.price, emoji: p.emoji, category: p.category, quantity: 1 + Math.floor(Math.random() * 2) };
-      });
-      const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
-      const shipping = shippingFor(subtotal, settings.shipping);
-      const status = pick(["Delivered", "Delivered", "Delivered", "Shipped", "Processing", "Cancelled"]);
-      const method = pick(settings.payments.methods);
-      const name = pick(demoNames);
-      return {
-        id: `DEMO-${String(n + 1).padStart(3, "0")}`,
-        demo: true,
-        items,
-        subtotal,
-        discount: 0,
-        shipping,
-        total: subtotal + shipping,
-        guest: true,
-        createdAt: created.toISOString(),
-        status,
-        statusHistory: [{ status: "Processing", at: created.toISOString() }, ...(status !== "Processing" ? [{ status, at: created.toISOString() }] : [])],
-        payment: { method: method.id, title: method.title, reference: null, status: status === "Delivered" ? "Paid" : "Pending" },
-        customer: {
-          name,
-          email: `${name.split(" ")[0].toLowerCase()}@example.com`,
-          phone: "0300 0000000",
-          city: pick(demoCities),
-          address: "Demo address",
-        },
-      };
-    });
-    addOrders(list);
+  const [demoBusy, setDemoBusy] = useState(false);
+  const [demoError, setDemoError] = useState("");
+
+  // Sample orders (stored with is_demo = 1) so the charts have something to show.
+  async function demo(method) {
+    setDemoBusy(true);
+    try {
+      await api("/api/admin/orders/demo", { method });
+      setDemoError("");
+    } catch (err) {
+      setDemoError(err.message);
+    }
+    setDemoBusy(false);
+    onChange();
   }
 
   return (
@@ -272,11 +243,11 @@ export default function SalesReport() {
         <h2 className="text-xl">Sales Report &amp; Analytics</h2>
         <div className="flex flex-wrap gap-2">
           {hasDemo ? (
-            <button type="button" onClick={removeDemoOrders} className="btn btn-outline btn-sm">
+            <button type="button" onClick={() => demo("DELETE")} disabled={demoBusy} className="btn btn-outline btn-sm">
               Remove demo orders
             </button>
           ) : (
-            <button type="button" onClick={generateDemo} disabled={products.length === 0} className="btn btn-outline btn-sm">
+            <button type="button" onClick={() => demo("POST")} disabled={demoBusy || products.length === 0} className="btn btn-outline btn-sm">
               Add demo orders
             </button>
           )}
@@ -285,6 +256,8 @@ export default function SalesReport() {
           </button>
         </div>
       </div>
+
+      {demoError && <p className="rounded-field bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{demoError}</p>}
 
       {/* Date range filter: one row above everything it scopes */}
       <div role="radiogroup" aria-label="Date range" className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">

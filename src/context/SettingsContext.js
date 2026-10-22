@@ -1,38 +1,33 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useMemo } from "react";
 import { applyStoreName, defaultSettings, mergeSettings } from "@/data/siteContent";
-import { createLocalStore } from "@/lib/localStore";
+import { api } from "@/lib/api";
 
-// Website content and store settings edited by the super admin.
-// DEMO ONLY: saved in this browser until the site is connected to MySQL.
-const settingsStore = createLocalStore("siteSettings", {});
-
+// Website content and store settings, loaded from MySQL and edited by the super admin.
 const SettingsContext = createContext(null);
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
-export function SettingsProvider({ children }) {
-  const saved = settingsStore.useValue();
+export function SettingsProvider({ saved, children }) {
+  const router = useRouter();
   // rawSettings keep "{storeName}" placeholders (for the editor); settings have them filled in.
-  const rawSettings = useMemo(() => mergeSettings(defaultSettings, saved), [saved]);
+  const rawSettings = useMemo(() => mergeSettings(defaultSettings, saved ?? {}), [saved]);
   const settings = useMemo(() => applyStoreName(rawSettings, rawSettings.general.storeName), [rawSettings]);
 
-  function saveSection(key, value) {
-    settingsStore.set((prev) => ({ ...prev, [key]: value }));
+  async function saveSection(key, value) {
+    await api(`/api/admin/settings/${key}`, { method: "PUT", body: value });
+    router.refresh();
   }
 
-  function resetSection(key) {
-    settingsStore.set((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
+  async function resetSection(key) {
+    await api(`/api/admin/settings/${key}`, { method: "DELETE" });
+    router.refresh();
   }
 
   return (
-    <SettingsContext.Provider value={{ settings, rawSettings, saved, saveSection, resetSection }}>
+    <SettingsContext.Provider value={{ settings, rawSettings, saveSection, resetSection }}>
       <ThemeColors general={settings.general} />
       <StoreNameInTitle name={settings.general.storeName} />
       {children}
@@ -57,11 +52,13 @@ function ThemeColors({ general }) {
 function StoreNameInTitle({ name }) {
   const pathname = usePathname();
   useEffect(() => {
-    if (name === defaultSettings.general.storeName) return;
+    const original = defaultSettings.general.storeName;
+    if (name === original) return;
+    // The new name can contain the old one ("HAK Store Lahore"), so check it isn't already applied
+    // or the observer below would keep rewriting the title forever.
+    const applied = (title) => (name.includes(original) ? title.includes(name) : !title.includes(original));
     const fix = () => {
-      if (document.title.includes(defaultSettings.general.storeName)) {
-        document.title = document.title.replaceAll(defaultSettings.general.storeName, name);
-      }
+      if (!applied(document.title)) document.title = document.title.replaceAll(original, name);
     };
     fix();
     const observer = new MutationObserver(fix);
@@ -77,7 +74,7 @@ export function useSettings() {
   return context;
 }
 
-// Enabled payment methods (Card always shows as "coming soon": it needs a payment gateway).
+// Payment methods switched on by the super admin.
 export function usePaymentMethods() {
   const { settings } = useContext(SettingsContext);
   return settings.payments.methods.filter((m) => m.enabled);

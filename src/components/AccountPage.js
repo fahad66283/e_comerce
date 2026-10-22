@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { formatDate, useOrders } from "@/context/OrdersContext";
-import { ROLE_LABELS } from "@/data/accounts";
+import { useApiData } from "@/lib/api";
+import { formatDate } from "@/lib/format";
+import { ROLE_LABELS } from "@/data/roles";
 import { formatPrice } from "@/data/products";
 import ChangePassword from "./ChangePassword";
 import OrderItems from "./OrderItems";
@@ -18,11 +18,8 @@ const quickLinks = [
 ];
 
 export default function AccountPage() {
-  const { user, isAdmin, hydrated, logout } = useAuth();
-  const { getOrdersByEmail } = useOrders();
-  const router = useRouter();
-
-  if (!hydrated) return <p className="container-page py-16 text-grey-500">Loading...</p>;
+  const { user, isAdmin, logout } = useAuth();
+  const { data, loading, error } = useApiData(user ? "/api/account/orders" : null);
 
   if (!user) {
     return (
@@ -42,12 +39,11 @@ export default function AccountPage() {
     );
   }
 
-  const orders = getOrdersByEmail(user.email);
+  const orders = data?.orders ?? [];
   const totalSpent = orders.filter((o) => o.status !== "Cancelled").reduce((sum, o) => sum + o.total, 0);
 
   function handleLogout() {
     logout();
-    router.push("/");
   }
 
   return (
@@ -109,7 +105,11 @@ export default function AccountPage() {
 
         <section>
           <h2 className="mb-4 text-xl">My Orders</h2>
-          {orders.length === 0 ? (
+          {loading ? (
+            <p className="card p-6 text-grey-500">Loading your orders...</p>
+          ) : error ? (
+            <p className="card p-6 font-bold text-red-600">{error}</p>
+          ) : orders.length === 0 ? (
             <div className="panel text-center">
               <p className="text-4xl">📦</p>
               <p className="mt-3 font-bold">You haven&apos;t placed any orders yet.</p>
@@ -156,7 +156,7 @@ export default function AccountPage() {
             </ul>
           )}
           <p className="mt-4 text-xs text-grey-500">
-            Orders placed while logged out with the same email address also appear here.
+            Orders you placed as a guest on this device are added when you log in. For other orders, use Track Order.
           </p>
         </section>
       </div>

@@ -1,6 +1,36 @@
 # HAK Store – E-commerce Store
 
-A static e-commerce web application built with **React**, **Next.js** (App Router) and **Tailwind CSS**.
+An e-commerce web application built with **React**, **Next.js** (App Router) and **Tailwind CSS**, with all
+data (products, orders, accounts, reviews, photos and website content) stored in a **MySQL** database.
+
+## Quick Start
+
+1. Create a MySQL database (on Hostinger: **hPanel → Databases → Management**).
+2. Copy `.env.example` to a new file named **`.env`** (next to `package.json`) and fill in your database details:
+
+   ```ini
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_NAME=u123456789_hakstore
+   DB_USER=u123456789_hak
+   DB_PASSWORD="your database password"
+   ```
+
+   Keep the double quotes around the password (needed when it contains `#` or spaces).
+3. Install and start:
+
+   ```bash
+   npm install
+   npm run build
+   npm start
+   ```
+
+On the first start the app **creates all tables and loads the default data automatically**: no phpMyAdmin
+import needed. Open `/api/health` to check the connection (`{"ok":true,"database":"connected",...}`).
+If something is wrong, the site shows what to fix (missing settings, wrong password, unknown database...).
+
+> `.env` holds your database password, so it is **never committed to git** (it's in `.gitignore`).
+> Only `.env.example`, without real values, is in the repository.
 
 ## Theme
 
@@ -24,7 +54,7 @@ A static e-commerce web application built with **React**, **Next.js** (App Route
 | Wishlist | `/wishlist` |
 | Login / Sign up | `/login`, `/signup` |
 | My Account (profile + order history) | `/account` |
-| Admin Dashboard (overview, orders, products, customers) | `/dashboard` |
+| Admin Dashboard (overview, orders, products, customers, messages...) | `/dashboard` |
 | About Us / Contact Us | `/about`, `/contact` |
 | FAQs | `/faqs` |
 | Privacy Policy / Terms & Conditions | `/privacy-policy`, `/terms` |
@@ -56,6 +86,7 @@ Old addresses `/admin` and `/register` redirect to `/dashboard` and `/signup`.
 - Coupons: create percentage or fixed coupons with a minimum order, switch on/off, see usage
 - Reviews: view and delete customer reviews
 - Customers: registered and guest customers with order count and total spent
+- Messages: contact form messages (mark as read, delete), with a counter in the header
 - Reports: revenue, orders, average order value, items sold, discounts, revenue-per-day chart,
   top products, sales by category, orders by status, payment methods, date ranges and CSV export
 
@@ -76,15 +107,21 @@ Log in as super admin → **Dashboard → Settings**:
 | **Admin** | `kamisofts@gmail.com` (or admins the super admin adds) | Orders, products, categories, coupons, reviews, customers, reports |
 | **Customer** | Signs up at `/signup` | Shopping, wishlist, reviews, order history |
 
-Passwords are stored only as salted PBKDF2-SHA256 hashes (`src/lib/password.js`, `src/data/accounts.js`).
+Passwords are stored in the `users` table only as salted PBKDF2-SHA256 hashes (`src/lib/server/password.js`).
 Change passwords from **My Account → Password**; the super admin can reset any user's password in **Dashboard → Users**.
 
-> **Important – demo only.** There is no backend yet, so accounts, orders, reviews, settings and uploaded
-> photos are saved in each browser (localStorage + IndexedDB):
-> - Data is only visible in the browser where it was created. Use **Dashboard → Backup** to copy it.
-> - The role checks run in the browser, so a technical user could bypass them.
->
-> Before going live, connect the site to the MySQL database in `database/` with a server layer.
+**Security**
+- Logins are checked on the server. The session is a random token in an `httpOnly` cookie (30 days);
+  only its SHA-256 hash is saved in the `sessions` table. Logging out deletes it.
+- Every admin action is checked on the server (`requireStaff` / `requireSuperAdmin` in `src/lib/server/api.js`).
+- Prices, stock, coupons and shipping are recalculated on the server when an order is placed, so they
+  can't be changed in the browser. Stock is reserved inside a database transaction.
+- Login, sign-up, contact, reviews and order tracking are rate-limited.
+- An order's details can be opened only with the secret link from checkout, by the customer's account,
+  by staff, or on **Track Order** with the order ID + email/phone.
+
+**What stays in the browser:** the shopping cart and a guest's wishlist (until they log in, when the
+wishlist and any guest orders placed in that browser are added to their account).
 
 ## Super Admin: Edit the Whole Website
 
@@ -101,35 +138,44 @@ Long text supports `**bold**`, `[links](/page)` and `- ` bullets. Write `{storeN
 Default content lives in `src/data/siteContent.js`.
 
 **Dashboard → Users:** add admins or customers, change roles, disable accounts, set passwords.
-**Dashboard → Backup:** download/restore a full backup, or export everything as a `.sql` file for MySQL.
+**Dashboard → Backup:** download the whole database as a `.sql` file (restore it in phpMyAdmin), and copy
+data saved in a browser by the old browser-only version of the site into MySQL.
 
 ## Product Photos
 
 Each product can have **up to 5 photos** (Dashboard → Products → Add/Edit). Photos are resized in the
-browser (max 1200px) and stored in IndexedDB; the first photo is the main image. Products without photos
-show their emoji.
+browser (max 1200px, JPEG/PNG/WebP), stored in the MySQL `images` table and served from `/api/images/<id>`
+with long-term caching. The first photo is the main image; products without photos show their emoji.
+Logos uploaded in **Website → Branding** work the same way.
 
-## MySQL Database (Hostinger)
+## Deploying on Hostinger
 
-See **[`database/README.md`](database/README.md)**: migration `001_initial_schema.sql` (16 tables),
-seed `001_default_data.sql`, Hostinger phpMyAdmin import steps, and how to verify password hashes on a server.
-Regenerate the seed with `npm run db:seed`.
+The site needs a plan that runs **Node.js web apps** (Business Web Hosting, Cloud plans or a VPS).
 
-## Getting Started
+1. **hPanel → Databases → Management:** create the database and user. Note the full names
+   (with the `u123456789_` prefix) and the password.
+2. On your computer, copy `.env.example` to `.env` and fill in those details (`DB_HOST=localhost`
+   when the database is on the same Hostinger account).
+3. Open your Node.js web app's deployment settings (or **Environment variables** in the website
+   dashboard), choose to **import a `.env` file** and pick your `.env`, or add the five
+   `DB_...` variables one by one. Hostinger keeps them for every later deploy.
+4. Deploy (build command `npm run build`, start command `npm start`), then open
+   `https://your-domain/api/health`. The first visit creates the tables and default data.
+5. Log in as the super admin and **change the default passwords** (My Account → Password).
+
+**Working on your computer with the Hostinger database:** in hPanel → Databases → **Remote MySQL**,
+allow your IP address, and use the host name shown there as `DB_HOST` in your local `.env`.
+
+More about the tables, migrations and manual phpMyAdmin import: **[`database/README.md`](database/README.md)**.
+
+## Commands
 
 ```bash
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-Other commands:
-
-```bash
+npm run dev     # development server on http://localhost:3000 (needs .env)
 npm run build   # production build
 npm start       # run the production build
 npm run lint    # lint the code
+npm run db:seed # regenerate database/seeds/001_default_data.sql from src/data
 ```
 
 ## Project Structure
@@ -153,36 +199,35 @@ src/
 │   ├── wishlist/, track-order/ # Wishlist, order tracking
 │   ├── order-confirmation/   # Order confirmation
 │   ├── faqs/, privacy-policy/, terms/, return-policy/
+│   ├── api/                  # Server API (auth, orders, reviews, admin/..., images, health)
 │   └── not-found.js          # 404 page
-├── components/               # Navbar, Footer, ProductCard, AdminDashboard, ...
-├── context/
-│   ├── AuthContext.js        # Login, registration, admin check
-│   ├── CartContext.js        # Cart state
-│   ├── OrdersContext.js      # Orders
-│   └── ProductsContext.js    # Product listings (editable by admin)
+├── components/               # Navbar, Footer, ProductCard, AdminDashboard, StoreShell, ...
+├── context/                  # Settings, Auth, Products, Cart, Wishlist, Reviews (data comes from MySQL)
 ├── lib/
-│   ├── localStore.js         # localStorage-backed store helper
-│   ├── imageStore.js         # Photo uploads (IndexedDB, resizing)
-│   ├── password.js           # PBKDF2 password hashing
-│   └── sqlExport.js          # MySQL export (dashboard + seed generator)
-└── data/
-    ├── products.js           # Default products, categories, coupons
-    ├── siteContent.js        # Default editable website content & settings
-    └── accounts.js           # Built-in super admin / admin accounts
-database/                     # MySQL schema, seed and Hostinger guide
+│   ├── server/
+│   │   ├── db.js             # MySQL connection pool, automatic migrations + default data
+│   │   ├── auth.js           # Sessions (httpOnly cookie) and the logged-in user
+│   │   ├── api.js            # API helpers: errors, validation, role checks
+│   │   ├── password.js       # PBKDF2 password hashing
+│   │   ├── storeData.js      # Data loaded for every page
+│   │   └── store/            # Database queries: catalog, orders, users, settings, images, ...
+│   ├── api.js                # Browser helper for calling the API
+│   ├── imageStore.js         # Photo resizing before upload
+│   └── sqlExport.js          # SQL generator used by npm run db:seed
+└── data/                     # Default products, website content and staff accounts (used for the seed)
+database/                     # MySQL migrations, seed and guide
 scripts/generate-seed.mjs     # Regenerates database/seeds/001_default_data.sql
+.env.example                  # Template for your .env database settings
 ```
 
 ## Editing Products
 
-The default products live in `src/data/products.js`. Admins add, edit and delete products (with up to
-5 photos each) from **Dashboard → Products**; "Reset to Default" restores the list from that file.
+Admins add, edit and delete products (with up to 5 photos each) from **Dashboard → Products**; changes
+are saved in MySQL and visible to every visitor immediately. "Reset to Default" restores the default
+products from `src/data/products.js` (orders keep their item names and prices).
 
 ## Next Steps
 
-- Connect the website to the MySQL database (`database/`) with Next.js API routes, so every visitor
-  shares the same products, orders, accounts and content (needs Node.js hosting, e.g. Hostinger
-  Business/Cloud or a VPS)
-- Move login to the server with secure session cookies
-- Store uploaded photos as files on the server
-- Add an online payment gateway (e.g. JazzCash, Easypaisa, PayFast) and order emails
+- Add an online payment gateway (e.g. JazzCash, Easypaisa, PayFast)
+- Send order confirmation and status emails
+- Email verification and "forgot password" for customers

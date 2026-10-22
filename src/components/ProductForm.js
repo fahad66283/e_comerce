@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useProducts } from "@/context/ProductsContext";
-import { deleteImages } from "@/lib/imageStore";
+import { deleteUploads } from "@/lib/api";
 import ImageUploader from "./ImageUploader";
 import ProductImage from "./ProductImage";
 
@@ -35,7 +35,9 @@ export default function ProductForm({ product, onSave, onCancel }) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  function handleSubmit(e) {
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e) {
     e.preventDefault();
     const price = Number(form.price);
     const compareAt = form.compareAt === "" ? null : Number(form.compareAt);
@@ -43,19 +45,25 @@ export default function ProductForm({ product, onSave, onCancel }) {
       setError("The original price must be higher than the sale price, or left empty.");
       return;
     }
-    // Remove images that were taken out of the product (or uploaded then removed).
-    const kept = new Set(form.images);
-    deleteImages([...(product?.images ?? []), ...uploaded].filter((id) => !kept.has(id)));
-    onSave({
-      ...form,
-      name: form.name.trim(),
-      emoji: form.emoji.trim() || "📦",
-      description: form.description.trim(),
-      price,
-      compareAt,
-      rating: Number(form.rating),
-      stock: Number(form.stock),
-    });
+    setSaving(true);
+    setError("");
+    try {
+      await onSave({
+        ...form,
+        name: form.name.trim(),
+        emoji: form.emoji.trim() || "📦",
+        description: form.description.trim(),
+        price,
+        compareAt,
+        rating: Number(form.rating),
+        stock: Number(form.stock),
+      });
+      // Photos uploaded here but removed again before saving (the server removes the product's old ones).
+      deleteUploads(uploaded.filter((url) => !form.images.includes(url)));
+    } catch (err) {
+      setError(err.message);
+      setSaving(false);
+    }
   }
 
   return (
@@ -193,13 +201,13 @@ export default function ProductForm({ product, onSave, onCancel }) {
       </div>
 
       <div className="mt-6 flex gap-3">
-        <button type="submit" className="btn btn-primary">
-          {product ? "Save Changes" : "Add Product"}
+        <button type="submit" disabled={saving} className="btn btn-primary">
+          {saving ? "Saving..." : product ? "Save Changes" : "Add Product"}
         </button>
         <button
           type="button"
           onClick={() => {
-            deleteImages(uploaded);
+            deleteUploads(uploaded);
             onCancel();
           }}
           className="btn btn-outline"

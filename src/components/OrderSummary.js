@@ -10,9 +10,13 @@ function CouponBox() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
 
-  function handleApply() {
+  const [busy, setBusy] = useState(false);
+
+  async function handleApply() {
     if (!code.trim()) return;
-    const result = applyCoupon(code);
+    setBusy(true);
+    const result = await applyCoupon(code);
+    setBusy(false);
     setError(result.error ?? "");
     if (!result.error) setCode("");
   }
@@ -50,8 +54,8 @@ function CouponBox() {
           aria-label="Coupon code"
           className="min-w-0 flex-1 rounded-full border-[1.5px] border-[#333] bg-[#161616] px-4 py-2 text-sm uppercase text-white outline-none placeholder:normal-case placeholder:text-grey-500 focus:border-brand-500"
         />
-        <button type="button" onClick={handleApply} className="btn btn-primary btn-sm">
-          Apply
+        <button type="button" onClick={handleApply} disabled={busy} className="btn btn-primary btn-sm">
+          {busy ? "..." : "Apply"}
         </button>
       </div>
       {error && <p className="mt-1.5 text-xs text-amber-400">{error}</p>}

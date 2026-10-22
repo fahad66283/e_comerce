@@ -1,4 +1,4 @@
-import { formatDate } from "@/context/OrdersContext";
+import { formatDate } from "@/lib/format";
 
 const steps = [
   { status: "Processing", label: "Order placed", icon: "🧾" },

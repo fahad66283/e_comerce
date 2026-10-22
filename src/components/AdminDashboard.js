@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { Fragment, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useOrders } from "@/context/OrdersContext";
 import { useProducts } from "@/context/ProductsContext";
-import { useReviews } from "@/context/ReviewsContext";
 import { useSettings } from "@/context/SettingsContext";
 import { formatPrice } from "@/data/products";
+import { useApiData } from "@/lib/api";
 import CategoryManager from "./CategoryManager";
 import CouponManager from "./CouponManager";
 import DataManager from "./DataManager";
+import MessagesManager from "./MessagesManager";
 import OrdersManager from "./OrdersManager";
 import ProductManager from "./ProductManager";
 import ReviewManager from "./ReviewManager";
@@ -18,7 +18,7 @@ import SalesReport from "./SalesReport";
 import SettingsEditor from "./SettingsEditor";
 import UsersManager from "./UsersManager";
 
-const adminTabs = ["Overview", "Orders", "Products", "Categories", "Coupons", "Reviews", "Customers", "Reports"];
+const adminTabs = ["Overview", "Orders", "Products", "Categories", "Coupons", "Reviews", "Customers", "Messages", "Reports"];
 // Only the super admin can edit the website, store settings and users.
 const superAdminTabs = ["Website", "Settings", "Users", "Backup"];
 
@@ -50,18 +50,61 @@ function Alert({ tone, icon, children, action, onAction }) {
   );
 }
 
+// Registered customers plus guests who ordered (from MySQL).
+function CustomersTab() {
+  const { data, loading, error } = useApiData("/api/admin/customers");
+  const rows = data?.customers ?? [];
+  return (
+    <section>
+      <h2 className="mb-4 text-xl">Customers</h2>
+      {loading ? (
+        <p className="card px-4 py-10 text-center text-grey-500">Loading customers...</p>
+      ) : error ? (
+        <p className="card px-4 py-10 text-center font-bold text-red-600">{error}</p>
+      ) : rows.length === 0 ? (
+        <p className="card px-4 py-10 text-center text-grey-500">No customers yet.</p>
+      ) : (
+        <div className="card overflow-x-auto">
+          <table className="w-full min-w-[600px] text-left text-sm">
+            <thead className="border-b border-grey-200 bg-grey-50 text-grey-500">
+              <tr>
+                <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Email</th>
+                <th className="px-4 py-3 font-medium">Type</th>
+                <th className="px-4 py-3 font-medium">Orders</th>
+                <th className="px-4 py-3 font-medium">Total Spent</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-grey-200">
+              {rows.map((c) => (
+                <tr key={c.email} className="hover:bg-grey-50">
+                  <td className="px-4 py-3 font-bold">{c.name}</td>
+                  <td className="px-4 py-3 text-grey-500">{c.email}</td>
+                  <td className="px-4 py-3">
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-extrabold ${c.guest ? "bg-grey-100 text-grey-500" : "bg-brand-100 text-brand-700"}`}>
+                      {c.guest ? "Guest" : "Registered"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">{c.orders}</td>
+                  <td className="px-4 py-3 font-bold">{formatPrice(c.spent)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function AdminDashboard() {
-  const { isAdmin, isSuperAdmin, hydrated, customers, user } = useAuth();
+  const { isAdmin, isSuperAdmin, user, adminSummary } = useAuth();
   const { settings } = useSettings();
   const lowStockAt = settings.inventory.lowStock;
-  const { orders } = useOrders();
   const { products } = useProducts();
-  const { reviews } = useReviews();
   const [tab, setTab] = useState("Overview");
-
-  if (!hydrated) {
-    return <p className="container-page py-16 text-grey-500">Loading...</p>;
-  }
+  const { data, error, reload: reloadOrders } = useApiData(isAdmin ? "/api/admin/orders" : null);
+  const orders = data?.orders ?? [];
 
   if (!isAdmin) {
     return (
@@ -82,20 +125,12 @@ export default function AdminDashboard() {
   const outOfStock = products.filter((p) => p.stock < 1);
   const lowStock = products.filter((p) => p.stock > 0 && p.stock <= lowStockAt);
 
-  // Customers: registered accounts plus guests who ordered with another email.
-  const registered = new Set(customers.map((c) => c.email));
-  const guests = [];
-  for (const o of orders) {
-    if (!registered.has(o.customer.email) && !guests.some((g) => g.email === o.customer.email)) {
-      guests.push({ name: o.customer.name, email: o.customer.email, phone: o.customer.phone, guest: true });
-    }
-  }
-  const customerRows = [...customers.map((c) => ({ ...c, guest: false })), ...guests].map((c) => {
-    const theirs = orders.filter((o) => o.customer.email === c.email && o.status !== "Cancelled");
-    return { ...c, orders: theirs.length, spent: theirs.reduce((sum, o) => sum + o.total, 0) };
-  });
-
-  const badges = { Orders: pending.length, Products: outOfStock.length + lowStock.length };
+  const customerCount = new Set(orders.filter((o) => !o.demo).map((o) => o.customer.email)).size;
+  const badges = {
+    Orders: pending.length,
+    Products: outOfStock.length + lowStock.length,
+    Messages: adminSummary.unreadMessages,
+  };
 
   return (
     <div className="container-page py-16">
@@ -172,7 +207,7 @@ export default function AdminDashboard() {
             <StatCard label="Revenue" value={formatPrice(revenue)} />
             <StatCard label="Orders" value={orders.length} />
             <StatCard label="Products" value={products.length} />
-            <StatCard label="Customers" value={customerRows.length} />
+            <StatCard label="Customers" value={customerCount} />
           </div>
 
           <section>
@@ -182,11 +217,10 @@ export default function AdminDashboard() {
                 View all →
               </button>
             </div>
-            <OrdersManager compact limit={5} />
+            <OrdersManager orders={orders} onChange={reloadOrders} compact limit={5} />
           </section>
 
           <p className="text-sm text-grey-500">
-            {reviews.length} customer {reviews.length === 1 ? "review" : "reviews"} ·{" "}
             <button type="button" onClick={() => setTab("Reports")} className="font-extrabold text-brand-700 hover:underline">
               Open sales report →
             </button>
@@ -197,7 +231,7 @@ export default function AdminDashboard() {
       {tab === "Orders" && (
         <section>
           <h2 className="mb-4 text-xl">Orders</h2>
-          <OrdersManager />
+          <OrdersManager orders={orders} onChange={reloadOrders} />
         </section>
       )}
 
@@ -205,57 +239,20 @@ export default function AdminDashboard() {
       {tab === "Categories" && <CategoryManager />}
       {tab === "Coupons" && <CouponManager />}
       {tab === "Reviews" && <ReviewManager />}
-      {tab === "Reports" && <SalesReport />}
+      {tab === "Messages" && <MessagesManager />}
+      {tab === "Reports" && <SalesReport orders={orders} onChange={reloadOrders} />}
       {isSuperAdmin && tab === "Website" && <SettingsEditor group="website" />}
       {isSuperAdmin && tab === "Settings" && <SettingsEditor group="settings" />}
       {isSuperAdmin && tab === "Users" && <UsersManager />}
       {isSuperAdmin && tab === "Backup" && <DataManager />}
 
-      {tab === "Customers" && (
-        <section>
-          <h2 className="mb-4 text-xl">Customers</h2>
-          {customerRows.length === 0 ? (
-            <p className="card px-4 py-10 text-center text-grey-500">No customers yet.</p>
-          ) : (
-            <div className="card overflow-x-auto">
-              <table className="w-full min-w-[600px] text-left text-sm">
-                <thead className="border-b border-grey-200 bg-grey-50 text-grey-500">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Name</th>
-                    <th className="px-4 py-3 font-medium">Email</th>
-                    <th className="px-4 py-3 font-medium">Type</th>
-                    <th className="px-4 py-3 font-medium">Orders</th>
-                    <th className="px-4 py-3 font-medium">Total Spent</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-grey-200">
-                  {customerRows.map((c) => (
-                    <tr key={c.email} className="hover:bg-grey-50">
-                      <td className="px-4 py-3 font-bold">{c.name}</td>
-                      <td className="px-4 py-3 text-grey-500">{c.email}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-extrabold ${
-                            c.guest ? "bg-grey-100 text-grey-500" : "bg-brand-100 text-brand-700"
-                          }`}
-                        >
-                          {c.guest ? "Guest" : "Registered"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">{c.orders}</td>
-                      <td className="px-4 py-3 font-bold">{formatPrice(c.spent)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      )}
+      {tab === "Customers" && <CustomersTab />}
 
-      <p className="mt-8 text-xs text-grey-500">
-        Demo mode: orders, customers and catalog changes are stored in this browser only.
-      </p>
+      {error && (
+        <p role="alert" className="mt-6 rounded-field bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+          Could not load orders: {error}
+        </p>
+      )}
     </div>
   );
 }

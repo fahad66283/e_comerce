@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useState } from "react";
-import { ACCEPTED_TYPES, saveUploadedImage } from "@/lib/imageStore";
+import { uploadImage } from "@/lib/api";
+import { ACCEPTED_TYPES, resizeImage } from "@/lib/imageStore";
 import StoredImage from "./StoredImage";
 
 // Upload, reorder and remove images. The first image is the main one.
@@ -22,7 +23,8 @@ export default function ImageUploader({ value, onChange, onUploaded, max = 5, lo
     const added = [];
     for (const file of files.slice(0, room)) {
       try {
-        added.push(await saveUploadedImage(file, logo ? { maxSize: 600, keepTransparency: true } : undefined));
+        const blob = await resizeImage(file, logo ? { maxSize: 600, keepTransparency: true } : undefined);
+        added.push(await uploadImage(blob, logo ? "logo" : "product"));
       } catch (err) {
         setError(err.message);
       }
@@ -54,7 +56,7 @@ export default function ImageUploader({ value, onChange, onUploaded, max = 5, lo
       <div className="mt-1.5 grid grid-cols-3 gap-2.5 sm:grid-cols-5">
         {images.map((id, i) => (
           <div key={id} className="group relative aspect-square overflow-hidden rounded-field border border-grey-200 bg-grey-50">
-            <StoredImage id={id} alt={`Image ${i + 1}`} className={`h-full w-full ${logo ? "object-contain p-2" : "object-cover"}`} />
+            <StoredImage src={id} alt={`Image ${i + 1}`} className={`h-full w-full ${logo ? "object-contain p-2" : "object-cover"}`} />
             {i === 0 && max > 1 && (
               <span className="absolute left-1.5 top-1.5 rounded-full bg-ink px-2 py-0.5 text-[0.65rem] font-extrabold text-white">
                 Main

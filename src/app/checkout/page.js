@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
-import { useOrders } from "@/context/OrdersContext";
-import { useProducts } from "@/context/ProductsContext";
 import { formatPrice } from "@/data/products";
 import { usePaymentMethods } from "@/context/SettingsContext";
 import { PAYMENT_ICONS } from "@/data/siteContent";
 import OrderSummary from "@/components/OrderSummary";
+import { api } from "@/lib/api";
+import { rememberGuestOrder } from "@/lib/guestOrders";
 
 const fields = [
   { name: "fullName", label: "Full Name", type: "text", autoComplete: "name" },
@@ -21,13 +21,12 @@ const fields = [
 ];
 
 export default function CheckoutPage() {
-  const { items, subtotal, discount, couponCode, shipping, total, loaded, clearCart } = useCart();
+  const { items, discount, couponCode, total, loaded, clearCart } = useCart();
   const { user } = useAuth();
-  const { placeOrder } = useOrders();
-  const { reduceStock } = useProducts();
   const router = useRouter();
   const [method, setMethod] = useState("cod");
   const [placing, setPlacing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   const methods = usePaymentMethods();
@@ -35,7 +34,7 @@ export default function CheckoutPage() {
   const selected = methods.find((m) => m.id === method) ?? methods[0];
   const isManual = selected?.details.length > 0;
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const tooMany = items.find(({ quantity, product }) => quantity > product.stock);
     if (tooMany) {
@@ -47,42 +46,35 @@ export default function CheckoutPage() {
       return;
     }
     const form = new FormData(e.target);
-    // Static demo: the order is saved in this browser only, no money is taken.
-    const id = placeOrder({
-      items: items.map(({ id, quantity, product }) => ({
-        id,
-        quantity,
-        name: product.name,
-        price: product.price,
-        emoji: product.emoji,
-        image: product.images?.[0] ?? null,
-        category: product.category,
-      })),
-      subtotal,
-      discount,
-      couponCode: discount > 0 ? couponCode : null,
-      shipping,
-      total,
-      notes: form.get("notes"),
-      guest: !user,
-      payment: {
-        method: selected.id,
-        title: selected.title,
-        reference: isManual ? form.get("reference").trim() : null,
-        status: "Pending",
-      },
-      customer: {
-        name: form.get("fullName").trim(),
-        phone: form.get("phone").trim(),
-        email: form.get("email"),
-        city: form.get("city").trim(),
-        address: form.get("address").trim(),
-      },
-    });
-    reduceStock(items);
-    setPlacing(true);
-    clearCart();
-    router.push(`/order-confirmation?id=${id}`);
+    setSubmitting(true);
+    setError("");
+    try {
+      // The server checks stock, prices and the coupon again, and saves the order in MySQL.
+      const order = await api("/api/orders", {
+        method: "POST",
+        body: {
+          items: items.map(({ id, quantity }) => ({ id, quantity })),
+          couponCode: discount > 0 ? couponCode : null,
+          notes: form.get("notes"),
+          payment: { method: selected.id, reference: isManual ? form.get("reference") : null },
+          customer: {
+            name: form.get("fullName"),
+            phone: form.get("phone"),
+            email: form.get("email"),
+            city: form.get("city"),
+            address: form.get("address"),
+          },
+        },
+      });
+      if (!user) rememberGuestOrder(order.id, order.key);
+      setPlacing(true);
+      clearCart();
+      router.push(`/order-confirmation?id=${encodeURIComponent(order.id)}&key=${order.key}`);
+      router.refresh(); // stock levels changed
+    } catch (err) {
+      setError(err.message);
+      setSubmitting(false);
+    }
   }
 
   if (placing) {
@@ -210,8 +202,8 @@ export default function CheckoutPage() {
               {error}
             </p>
           )}
-          <button type="submit" className="btn btn-primary mt-[18px] w-full">
-            Place Order
+          <button type="submit" disabled={submitting} className="btn btn-primary mt-[18px] w-full">
+            {submitting ? "Placing order..." : "Place Order"}
           </button>
           <p className="mt-3 text-center text-xs text-grey-400">
             By placing your order you agree to our{" "}

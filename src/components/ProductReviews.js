@@ -1,46 +1,52 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { formatDate, useOrders } from "@/context/OrdersContext";
 import { useReviews } from "@/context/ReviewsContext";
+import { api, useApiData } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 import { StarInput, Stars } from "./Stars";
 
 export default function ProductReviews({ product }) {
-  const { getReviews, getRating, addReview } = useReviews();
+  const { getRating } = useReviews();
   const { user } = useAuth();
-  const { getOrdersByEmail } = useOrders();
+  const router = useRouter();
+  const { data, reload } = useApiData(`/api/reviews?product=${encodeURIComponent(product.id)}`);
   const [rating, setRating] = useState(0);
   const [error, setError] = useState("");
   const [thanks, setThanks] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const reviews = getReviews(product.id);
+  const reviews = data?.reviews ?? [];
   const { average } = getRating(product);
   const breakdown = [5, 4, 3, 2, 1].map((n) => ({ n, count: reviews.filter((r) => r.rating === n).length }));
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!rating) {
       setError("Please choose a star rating.");
       return;
     }
-    const form = new FormData(e.target);
-    const email = user?.email ?? "";
-    // "Verified buyer" when this account has an order containing the product.
-    const verified =
-      !!email && getOrdersByEmail(email).some((o) => o.items.some((i) => i.id === product.id));
-    addReview({
-      productId: product.id,
-      name: (user?.name ?? form.get("name")).trim(),
-      email,
-      rating,
-      comment: form.get("comment").trim(),
-      verified,
-    });
-    e.target.reset();
-    setRating(0);
-    setError("");
-    setThanks(true);
+    const formElement = e.target;
+    const form = new FormData(formElement);
+    setBusy(true);
+    try {
+      // The server marks the review "Verified buyer" when this account ordered the product.
+      await api("/api/reviews", {
+        method: "POST",
+        body: { product: product.id, name: form.get("name") ?? "", rating, comment: form.get("comment") },
+      });
+      formElement.reset();
+      setRating(0);
+      setError("");
+      setThanks(true);
+      reload();
+      router.refresh(); // update the average rating
+    } catch (err) {
+      setError(err.message);
+    }
+    setBusy(false);
   }
 
   return (
@@ -91,8 +97,8 @@ export default function ProductReviews({ product }) {
             </label>
             {error && <p className="mt-2 text-sm font-bold text-red-600">{error}</p>}
             {thanks && <p className="mt-2 text-sm font-bold text-brand-700">✓ Thanks for your review!</p>}
-            <button type="submit" className="btn btn-primary mt-4 w-full">
-              Submit Review
+            <button type="submit" disabled={busy} className="btn btn-primary mt-4 w-full">
+              {busy ? "Sending..." : "Submit Review"}
             </button>
           </form>
         </div>

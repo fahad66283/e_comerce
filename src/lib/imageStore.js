@@ -1,74 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useHydrated } from "./localStore";
-
-// Uploaded images (product photos, logos) are kept in the browser's IndexedDB, which can hold
-// far more than localStorage. Records reference them by id ("img-..."). When the store moves to
-// MySQL, images become files on the server (database/README.md).
-const DB_NAME = "hak-store";
-const STORE = "images";
-let dbPromise;
-
-function openDb() {
-  dbPromise ??= new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = () => request.result.createObjectStore(STORE);
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-  return dbPromise;
-}
-
-async function withStore(mode, action) {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, mode);
-    const request = action(tx.objectStore(STORE));
-    tx.oncomplete = () => resolve(request?.result);
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error ?? new Error("Could not save the image (storage may be full)."));
-  });
-}
-
-export const isImageId = (value) => typeof value === "string" && value.startsWith("img-");
-
-export function putImage(id, blob) {
-  return withStore("readwrite", (store) => store.put(blob, id));
-}
-
-export function getImageBlob(id) {
-  return withStore("readonly", (store) => store.get(id));
-}
-
-export async function deleteImages(ids) {
-  const list = ids.filter(isImageId);
-  if (list.length === 0) return;
-  urlCache.forEach((url, id) => {
-    if (list.includes(id)) {
-      URL.revokeObjectURL(url);
-      urlCache.delete(id);
-    }
-  });
-  await withStore("readwrite", (store) => list.forEach((id) => store.delete(id)));
-}
-
-export function listImageIds() {
-  return withStore("readonly", (store) => store.getAllKeys());
-}
-
-// Every image id found anywhere inside a value (product, settings section, ...).
-export function collectImageIds(value, found = new Set()) {
-  if (isImageId(value)) found.add(value);
-  else if (Array.isArray(value)) value.forEach((v) => collectImageIds(v, found));
-  else if (value && typeof value === "object") Object.values(value).forEach((v) => collectImageIds(v, found));
-  return found;
-}
+// Image helpers for the browser:
+//  • resizeImage – shrinks photos before they are uploaded to the server
+//  • legacy IndexedDB readers – only used to import photos from the old browser-only version
 
 export const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 
-// Shrinks a photo before saving. Photos become JPEG (max 1200px); logos stay PNG to keep transparency.
+// Photos become JPEG (max 1200px); logos stay PNG to keep transparency.
 export async function resizeImage(file, { maxSize = 1200, keepTransparency = false } = {}) {
   if (!ACCEPTED_TYPES.includes(file.type)) throw new Error(`${file.name}: please use JPG, PNG, WebP or GIF.`);
   if (file.size > MAX_UPLOAD_BYTES) throw new Error(`${file.name} is larger than 15 MB.`);
@@ -90,14 +29,28 @@ export async function resizeImage(file, { maxSize = 1200, keepTransparency = fal
   );
 }
 
-export async function saveUploadedImage(file, options) {
-  const blob = await resizeImage(file, options);
-  const id = `img-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-  await putImage(id, blob);
-  return id;
+export const isUploadedImage = (value) => typeof value === "string" && value.startsWith("/api/images/");
+
+// Every uploaded-image URL found anywhere inside a value (product, settings section, ...).
+export function collectImageUrls(value, found = new Set()) {
+  if (isUploadedImage(value)) found.add(value);
+  else if (Array.isArray(value)) value.forEach((v) => collectImageUrls(v, found));
+  else if (value && typeof value === "object") Object.values(value).forEach((v) => collectImageUrls(v, found));
+  return found;
 }
 
-export function blobToDataUrl(blob) {
+// ---- Old browser-only version: photos were kept in IndexedDB ("hak-store" → "images") ----
+function openLegacyDb() {
+  return new Promise((resolve) => {
+    if (!globalThis.indexedDB) return resolve(null);
+    const request = indexedDB.open("hak-store", 1);
+    request.onupgradeneeded = () => request.result.createObjectStore("images");
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve(null);
+  });
+}
+
+function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
@@ -106,32 +59,21 @@ export function blobToDataUrl(blob) {
   });
 }
 
-export async function dataUrlToBlob(dataUrl) {
-  return (await fetch(dataUrl)).blob();
-}
-
-// Object URLs for displaying stored images, shared by all components.
-const urlCache = new Map();
-
-export function useImageUrl(id) {
-  const hydrated = useHydrated();
-  const [, setLoaded] = useState(0);
-
-  useEffect(() => {
-    if (!isImageId(id) || urlCache.has(id)) return;
-    let cancelled = false;
-    getImageBlob(id)
-      .then((blob) => {
-        if (!blob || cancelled) return;
-        if (!urlCache.has(id)) urlCache.set(id, URL.createObjectURL(blob));
-        setLoaded((n) => n + 1);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
-
-  // Nothing during server render/hydration, so the HTML always matches.
-  return hydrated && isImageId(id) ? (urlCache.get(id) ?? null) : null;
+// { "img-...": "data:image/...;base64,..." } for every photo saved by the old version.
+export async function readLegacyImages() {
+  const db = await openLegacyDb();
+  if (!db || !db.objectStoreNames.contains("images")) return {};
+  const entries = await new Promise((resolve) => {
+    const tx = db.transaction("images", "readonly");
+    const store = tx.objectStore("images");
+    const keys = store.getAllKeys();
+    const values = store.getAll();
+    tx.oncomplete = () => resolve(keys.result.map((k, i) => [k, values.result[i]]));
+    tx.onerror = () => resolve([]);
+  });
+  const out = {};
+  for (const [id, blob] of entries) {
+    if (typeof id === "string" && blob instanceof Blob) out[id] = await blobToDataUrl(blob);
+  }
+  return out;
 }

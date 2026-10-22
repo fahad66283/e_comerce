@@ -1,6 +1,6 @@
-// Built-in staff accounts. Only salted PBKDF2 password hashes are stored, never passwords.
-// The super admin can change these passwords from My Account, and manage other users
-// from Dashboard → Users.
+// Staff accounts loaded into an empty database on first start (see scripts/generate-seed.mjs).
+// Only salted PBKDF2 password hashes are stored, never passwords. Server/seed use only –
+// never import this file into browser code.
 export const BUILT_IN_ACCOUNTS = [
   {
     name: "Fahad Shah",
@@ -17,5 +17,3 @@ export const BUILT_IN_ACCOUNTS = [
     passwordHash: "pbkdf2_sha256$600000$80ea488ad4826ac360b3ae37149a3628$60f3f5939d826759ae20dbce09f3d57401860717303e377f4aa2af63389c5d87",
   },
 ];
-
-export const ROLE_LABELS = { superadmin: "Super Admin", admin: "Admin", customer: "Customer" };

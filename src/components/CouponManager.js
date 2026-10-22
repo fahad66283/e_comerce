@@ -1,16 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useCoupons } from "@/context/CouponsContext";
-import { useOrders } from "@/context/OrdersContext";
 import { formatPrice } from "@/data/products";
+import { api, useApiData } from "@/lib/api";
 
 const empty = { code: "", type: "percent", value: 10, minOrder: 0, active: true };
 
 // Coupons tab: create, edit, switch on/off and delete discount codes.
 export default function CouponManager() {
-  const { coupons, saveCoupon, deleteCoupon } = useCoupons();
-  const { orders } = useOrders();
+  const { data, reload, error: loadError } = useApiData("/api/admin/coupons");
+  const coupons = data?.coupons ?? [];
   const [editing, setEditing] = useState(null); // null | "new" | coupon
   const [form, setForm] = useState(empty);
   const [error, setError] = useState("");
@@ -21,22 +20,35 @@ export default function CouponManager() {
     setError("");
   }
 
-  function handleSubmit(e) {
+  async function save(coupon, originalCode) {
+    await api("/api/admin/coupons", { method: "POST", body: { ...coupon, originalCode } });
+    reload();
+  }
+
+  async function handleSubmit(e) {
     e.preventDefault();
-    const data = { ...form, value: Number(form.value), minOrder: Number(form.minOrder) };
-    if (data.type === "percent" && (data.value < 1 || data.value > 90)) {
+    const coupon = { ...form, value: Number(form.value), minOrder: Number(form.minOrder) };
+    if (coupon.type === "percent" && (coupon.value < 1 || coupon.value > 90)) {
       setError("Percentage discounts must be between 1 and 90.");
       return;
     }
-    const result = saveCoupon(data, editing === "new" ? null : editing.code);
-    if (result.error) {
-      setError(result.error);
-      return;
+    try {
+      await save(coupon, editing === "new" ? null : editing.code);
+      setEditing(null);
+    } catch (err) {
+      setError(err.message);
     }
-    setEditing(null);
   }
 
-  const uses = (code) => orders.filter((o) => o.couponCode === code && o.status !== "Cancelled");
+  async function run(action) {
+    try {
+      await action();
+      setError("");
+    } catch (err) {
+      setError(err.message);
+    }
+    reload();
+  }
 
   return (
     <div>
@@ -51,6 +63,12 @@ export default function CouponManager() {
           + Add Coupon
         </button>
       </div>
+
+      {(loadError || (error && !editing)) && (
+        <p role="alert" className="mt-6 rounded-field bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+          {loadError || error}
+        </p>
+      )}
 
       {editing && (
         <form onSubmit={handleSubmit} className="panel mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -132,19 +150,18 @@ export default function CouponManager() {
           </thead>
           <tbody className="divide-y divide-grey-200">
             {coupons.map((c) => {
-              const used = uses(c.code);
               return (
                 <tr key={c.code} className="hover:bg-grey-50">
                   <td className="px-4 py-3 font-extrabold tracking-wide">{c.code}</td>
                   <td className="px-4 py-3">{c.type === "percent" ? `${c.value}% off` : `${formatPrice(c.value)} off`}</td>
                   <td className="px-4 py-3 text-grey-500">{c.minOrder > 0 ? formatPrice(c.minOrder) : "None"}</td>
                   <td className="px-4 py-3 text-grey-500">
-                    {used.length}× · {formatPrice(used.reduce((s, o) => s + o.discount, 0))} saved
+                    {c.uses}× · {formatPrice(c.saved)} saved
                   </td>
                   <td className="px-4 py-3">
                     <button
                       type="button"
-                      onClick={() => saveCoupon({ ...c, active: !c.active }, c.code)}
+                      onClick={() => run(() => save({ ...c, active: !c.active }, c.code))}
                       className={`rounded-full px-3 py-1 text-xs font-extrabold ${
                         c.active ? "bg-brand-100 text-brand-700" : "bg-grey-100 text-grey-500"
                       }`}
@@ -159,7 +176,9 @@ export default function CouponManager() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => confirm(`Delete coupon ${c.code}?`) && deleteCoupon(c.code)}
+                      onClick={() =>
+                        confirm(`Delete coupon ${c.code}?`) && run(() => api("/api/admin/coupons", { method: "DELETE", body: { code: c.code } }))
+                      }
                       className="font-bold text-red-600 hover:underline"
                     >
                       Delete

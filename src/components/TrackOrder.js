@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { formatDate, useOrders } from "@/context/OrdersContext";
+import { api } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 import { formatPrice } from "@/data/products";
 import OrderItems from "./OrderItems";
 import OrderTimeline from "./OrderTimeline";
@@ -13,26 +14,27 @@ import StatusBadge from "./StatusBadge";
 
 export default function TrackOrder() {
   const initialId = useSearchParams().get("id") ?? "";
-  const { findOrderForTracking } = useOrders();
   const { user } = useAuth();
-  const [lookup, setLookup] = useState(null);
+  const [order, setOrder] = useState(null);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  // Re-read the order on every render so status changes show up straight away.
-  const order = lookup ? findOrderForTracking(lookup.id, lookup.contact) : null;
-
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const form = new FormData(e.target);
-    const id = form.get("id").trim().replace(/^#/, "");
-    const contact = form.get("contact").trim();
-    if (findOrderForTracking(id, contact)) {
-      setLookup({ id, contact });
+    setBusy(true);
+    try {
+      const data = await api("/api/orders/track", {
+        method: "POST",
+        body: { id: form.get("id").trim().replace(/^#/, ""), contact: form.get("contact").trim() },
+      });
+      setOrder(data.order);
       setError("");
-    } else {
-      setLookup(null);
-      setError("We couldn't find an order with these details. Check the order ID and the email or phone used at checkout.");
+    } catch (err) {
+      setOrder(null);
+      setError(err.message);
     }
+    setBusy(false);
   }
 
   return (
@@ -59,8 +61,8 @@ export default function TrackOrder() {
             <span className="field-label">Email or Phone</span>
             <input required name="contact" defaultValue={user?.email} className="field-input" />
           </label>
-          <button type="submit" className="btn btn-primary">
-            Track
+          <button type="submit" disabled={busy} className="btn btn-primary">
+            {busy ? "Checking..." : "Track"}
           </button>
         </form>
 

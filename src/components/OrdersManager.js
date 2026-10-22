@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
-import { ORDER_STATUSES, PAYMENT_STATUSES, formatDate, useOrders } from "@/context/OrdersContext";
 import { formatPrice } from "@/data/products";
+import { api } from "@/lib/api";
+import { ORDER_STATUSES, PAYMENT_STATUSES, formatDate } from "@/lib/format";
 import OrderItems from "./OrderItems";
 import StatusBadge from "./StatusBadge";
 
@@ -11,11 +13,24 @@ const selectClass =
   "rounded-full border-[1.5px] border-grey-200 bg-white px-3 py-1.5 text-sm font-bold outline-none focus:border-ink";
 
 // Orders table. `compact` shows the latest few orders read-only (for the overview).
-export default function OrdersManager({ compact = false, limit }) {
-  const { orders, updateOrderStatus, updatePaymentStatus } = useOrders();
+export default function OrdersManager({ orders, onChange, compact = false, limit }) {
+  const router = useRouter();
+  const [failed, setFailed] = useState("");
   const [status, setStatus] = useState("All");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(null);
+
+  // Saves a status change, then reloads the orders (stock and badges refresh too).
+  async function update(id, changes) {
+    try {
+      await api(`/api/admin/orders/${encodeURIComponent(id)}`, { method: "PATCH", body: changes });
+      setFailed("");
+    } catch (err) {
+      setFailed(err.message);
+    }
+    onChange();
+    router.refresh();
+  }
 
   const q = search.trim().toLowerCase();
   let list = orders.filter(
@@ -31,6 +46,11 @@ export default function OrdersManager({ compact = false, limit }) {
 
   return (
     <div>
+      {failed && (
+        <p role="alert" className="mb-4 rounded-field bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+          {failed}
+        </p>
+      )}
       {!compact && (
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <input
@@ -104,7 +124,7 @@ export default function OrdersManager({ compact = false, limit }) {
                       ) : (
                         <select
                           value={o.payment.status}
-                          onChange={(e) => updatePaymentStatus(o.id, e.target.value)}
+                          onChange={(e) => update(o.id, { paymentStatus: e.target.value })}
                           aria-label={`Payment status of order ${o.id}`}
                           className={`${selectClass} mt-1`}
                         >
@@ -120,7 +140,7 @@ export default function OrdersManager({ compact = false, limit }) {
                       ) : (
                         <select
                           value={o.status}
-                          onChange={(e) => updateOrderStatus(o.id, e.target.value)}
+                          onChange={(e) => update(o.id, { status: e.target.value })}
                           aria-label={`Status of order ${o.id}`}
                           className={selectClass}
                         >
@@ -171,7 +191,7 @@ export default function OrdersManager({ compact = false, limit }) {
                                 {h.status} · {formatDate(h.at, true)}
                               </p>
                             ))}
-                            <Link href={`/order-confirmation?id=${o.id}`} className="mt-2 font-bold text-brand-700 hover:underline">
+                            <Link href={`/order-confirmation?id=${encodeURIComponent(o.id)}`} className="mt-2 font-bold text-brand-700 hover:underline">
                               Open order page →
                             </Link>
                           </div>

@@ -3,31 +3,37 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { formatDate, useOrders } from "@/context/OrdersContext";
-import { useHydrated } from "@/lib/localStore";
+import { useApiData } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 import OrderItems from "./OrderItems";
 import OrderTimeline from "./OrderTimeline";
 import PaymentInfo from "./PaymentInfo";
 import StatusBadge from "./StatusBadge";
 
 export default function OrderConfirmation() {
-  const id = useSearchParams().get("id");
-  const { getOrder } = useOrders();
+  const params = useSearchParams();
+  const id = params.get("id");
+  const key = params.get("key") ?? "";
   const { user } = useAuth();
-  const hydrated = useHydrated();
-  const order = id ? getOrder(id) : null;
+  const { data, loading } = useApiData(id ? `/api/orders/${encodeURIComponent(id)}?key=${encodeURIComponent(key)}` : null);
+  const order = data?.order;
 
-  if (!hydrated) return <p className="container-page py-16 text-grey-500">Loading...</p>;
+  if (id && loading) return <p className="container-page py-16 text-grey-500">Loading your order...</p>;
 
   if (!order) {
     return (
       <div className="mx-auto max-w-[500px] px-6 py-16 text-center">
         <p className="text-5xl">🔍</p>
         <h1 className="section-title mt-4">Order not found</h1>
-        <p className="mt-2 text-grey-500">We couldn&apos;t find this order on this device.</p>
-        <Link href="/products" className="btn btn-primary mt-8">
-          Continue Shopping
-        </Link>
+        <p className="mt-2 text-grey-500">Check the link from your confirmation, or use Track Order with your order ID and email or phone.</p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link href="/track-order" className="btn btn-primary">
+            Track Order
+          </Link>
+          <Link href="/products" className="btn btn-outline">
+            Continue Shopping
+          </Link>
+        </div>
       </div>
     );
   }
@@ -88,7 +94,7 @@ export default function OrderConfirmation() {
       </div>
 
       <p className="mt-6 text-center text-xs text-grey-500">
-        This is a demo store, so no real order was placed and no payment was processed.
+        Keep your order number for tracking. We&apos;ll contact you if anything is unclear.
       </p>
 
       <div className="mt-6 flex flex-wrap justify-center gap-3">
