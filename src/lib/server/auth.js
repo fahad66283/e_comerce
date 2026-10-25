@@ -1,6 +1,6 @@
 import "server-only";
 import crypto from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { query, queryOne } from "./db";
 
 const COOKIE = "hak_session";
@@ -18,30 +18,43 @@ export function publicUser(row) {
   };
 }
 
-export async function createSession(userId) {
+// The website keeps the session token in an httpOnly cookie. The mobile app (asks with
+// "X-Client: app") gets the token back instead and sends it as "Authorization: Bearer <token>".
+export async function createSession(userId, { cookie = true } = {}) {
   const token = crypto.randomBytes(32).toString("base64url");
   const expires = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
   await query("DELETE FROM sessions WHERE expires_at < UTC_TIMESTAMP()");
   await query("INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)", [hashToken(token), userId, expires]);
-  (await cookies()).set(COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    expires,
-  });
+  if (cookie) {
+    (await cookies()).set(COOKIE, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      expires,
+    });
+  }
+  return token;
+}
+
+export async function isAppRequest() {
+  return (await headers()).get("x-client") === "app";
+}
+
+async function sessionToken() {
+  const bearer = (await headers()).get("authorization")?.match(/^Bearer\s+(\S+)$/i)?.[1];
+  return bearer ?? (await cookies()).get(COOKIE)?.value;
 }
 
 export async function destroySession() {
-  const store = await cookies();
-  const token = store.get(COOKIE)?.value;
+  const token = await sessionToken();
   if (token) await query("DELETE FROM sessions WHERE token_hash = ?", [hashToken(token)]);
-  store.delete(COOKIE);
+  (await cookies()).delete(COOKIE);
 }
 
 // The logged-in user (or null). Disabled accounts and expired sessions count as logged out.
 export async function getCurrentUser() {
-  const token = (await cookies()).get(COOKIE)?.value;
+  const token = await sessionToken();
   if (!token || token.length > 100) return null;
   const row = await queryOne(
     `SELECT u.id, u.name, u.email, u.username, u.role

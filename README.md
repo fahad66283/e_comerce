@@ -195,6 +195,17 @@ browser (max 1200px, JPEG/PNG/WebP), stored in the MySQL `images` table and serv
 with long-term caching. The first photo is the main image; products without photos show their emoji.
 Logos uploaded in **Website → Branding** work the same way.
 
+## Mobile App (iOS & Android)
+
+The **`mobile/`** folder is the HAK Store app for iPhone and Android, built with Expo (React Native). It uses the
+same API and MySQL database as the website, with the same theme and flows: shopping, cart, coupons, checkout
+(including Stripe), order tracking, account, and the full admin dashboard for staff. See
+**[`mobile/README.md`](mobile/README.md)** to run it in Expo Go and publish it to the App Store and Google Play.
+
+The website's API serves the app too: `GET /api/store` returns everything the screens need, app logins get a token
+(sent as `Authorization: Bearer ...`) instead of the website's cookie, and Stripe returns app payments through
+`/api/stripe/app-return`.
+
 ## Deploying on Hostinger
 
 The site needs a plan that runs **Node.js web apps** (Business Web Hosting, Cloud plans or a VPS).
@@ -266,6 +277,7 @@ src/
 database/                     # MySQL migrations, seed and guide
 scripts/generate-seed.mjs     # Regenerates database/seeds/001_default_data.sql
 .env.example                  # Template for your .env database settings
+mobile/                       # iOS & Android app (Expo), see mobile/README.md
 ```
 
 ## Editing Products

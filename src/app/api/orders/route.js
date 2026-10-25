@@ -11,6 +11,9 @@ export const POST = route(async (request) => {
   const body = await readJson(request);
   const user = await getCurrentUser();
   const { id, key, method } = await placeOrder(body, user);
-  if (method === "stripe") return ok({ id, key, redirect: await startStripeCheckout({ id, key }, request) });
+  if (method === "stripe") {
+    const app = body.client === "app";
+    return ok({ id, key, redirect: await startStripeCheckout({ id, key }, request, { app, appReturn: app ? body.appReturn : undefined }) });
+  }
   return ok({ id, key });
 });
