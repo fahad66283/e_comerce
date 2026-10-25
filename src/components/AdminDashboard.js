@@ -121,7 +121,7 @@ export default function AdminDashboard() {
 
   const revenue = orders.filter((o) => o.status !== "Cancelled").reduce((sum, o) => sum + o.total, 0);
   const pending = orders.filter((o) => o.status === "Processing");
-  const toVerify = orders.filter((o) => o.payment.method !== "cod" && o.payment.status === "Pending" && o.status !== "Cancelled");
+  const toVerify = orders.filter((o) => !["cod", "stripe"].includes(o.payment.method) && o.payment.status === "Pending" && o.status !== "Cancelled");
   const outOfStock = products.filter((p) => p.stock < 1);
   const lowStock = products.filter((p) => p.stock > 0 && p.stock <= lowStockAt);
 

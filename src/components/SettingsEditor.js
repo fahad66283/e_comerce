@@ -27,7 +27,7 @@ function Field({ field, value, onChange, onUploaded }) {
       return (
         <label className="block">
           {label}
-          <textarea rows={field.rows ?? 3} value={value ?? ""} onChange={(e) => onChange(e.target.value)} className="field-input" />
+          <textarea rows={field.rows ?? 3} value={value ?? ""} placeholder={field.placeholder} onChange={(e) => onChange(e.target.value)} className="field-input" />
           {hint}
         </label>
       );
@@ -188,9 +188,28 @@ function ListField({ field, value, onChange, onUploaded }) {
   );
 }
 
+// Whether card payments are connected; the keys themselves live only in the server's .env file.
+function StripeStatus({ stripe }) {
+  if (!stripe?.ready) {
+    return (
+      <p className="mb-5 rounded-field bg-grey-50 px-4 py-3 text-sm text-grey-700">
+        💳 <strong>Card payments (Stripe) are off.</strong> Add <code className="rounded bg-grey-100 px-1">STRIPE_SECRET_KEY</code> to the
+        .env file (or Hostinger&apos;s environment variables) and restart the app to switch them on.
+      </p>
+    );
+  }
+  return (
+    <p className="mb-5 rounded-field bg-brand-100 px-4 py-3 text-sm text-brand-700">
+      💳 <strong>Stripe is connected{stripe.testMode ? " in test mode" : ""}.</strong>{" "}
+      {stripe.testMode ? "Payments are not real; use Stripe's test cards. Use an sk_live_ key to take real payments. " : ""}
+      {stripe.webhook ? "Payment updates (webhook) are set up." : "Add STRIPE_WEBHOOK_SECRET so payments are confirmed even if a customer closes the page."}
+    </p>
+  );
+}
+
 // Super admin editor for one group of sections ("website" content or store "settings").
 export default function SettingsEditor({ group }) {
-  const { rawSettings: settings, saveSection, resetSection } = useSettings();
+  const { rawSettings: settings, saveSection, resetSection, stripe } = useSettings();
   const sections = SECTIONS.filter((s) => s.group === group);
   const [active, setActive] = useState(sections[0].key);
   const [draft, setDraft] = useState(null); // null = no unsaved changes
@@ -305,6 +324,8 @@ export default function SettingsEditor({ group }) {
             </Link>
           )}
         </div>
+
+        {active === "payments" && <StripeStatus stripe={stripe} />}
 
         <div className="grid grid-cols-1 gap-5">
           {section.fields.map((field) => (

@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import { useApiData } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import OrderItems from "./OrderItems";
@@ -14,9 +16,28 @@ export default function OrderConfirmation() {
   const params = useSearchParams();
   const id = params.get("id");
   const key = params.get("key") ?? "";
+  const sessionId = params.get("session_id"); // back from paying on Stripe
   const { user } = useAuth();
-  const { data, loading } = useApiData(id ? `/api/orders/${encodeURIComponent(id)}?key=${encodeURIComponent(key)}` : null);
+  const { clearCart } = useCart();
+  const query = `key=${encodeURIComponent(key)}${sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : ""}`;
+  const { data, loading, reload } = useApiData(id ? `/api/orders/${encodeURIComponent(id)}?${query}` : null);
   const order = data?.order;
+  const [checks, setChecks] = useState(0);
+
+  const paidByCard = sessionId && order?.payment.method === "stripe";
+  useEffect(() => {
+    if (paidByCard && order.payment.status === "Paid") clearCart();
+  }, [paidByCard, order?.payment.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Stripe can take a few seconds to confirm: check again a few times.
+  useEffect(() => {
+    if (!paidByCard || order.payment.status !== "Pending" || order.status === "Cancelled" || checks >= 5) return;
+    const timer = setTimeout(() => {
+      setChecks((n) => n + 1);
+      reload();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [paidByCard, order?.payment.status, order?.status, checks, reload]);
 
   if (id && loading) return <p className="container-page py-16 text-grey-500">Loading your order...</p>;
 
@@ -52,6 +73,15 @@ export default function OrderConfirmation() {
         <p className="mt-2.5 text-grey-500">
           We&apos;ll start preparing it right away. It should arrive within 2–5 working days.
         </p>
+        {paidByCard && (
+          <p className={`mx-auto mt-4 max-w-md rounded-field px-4 py-3 text-sm font-bold ${order.payment.status === "Paid" ? "bg-brand-100 text-brand-700" : "bg-amber-50 text-amber-900"}`}>
+            {order.payment.status === "Paid"
+              ? "✓ Your card payment was successful."
+              : checks >= 5
+                ? "We haven't received the payment confirmation yet. It will update automatically – you can track this order any time."
+                : "Confirming your card payment..."}
+          </p>
+        )}
         <div className="my-4 inline-block rounded-full border-[1.5px] border-grey-200 bg-grey-100 px-[22px] py-2.5 font-extrabold tracking-wide">
           #{order.id}
         </div>

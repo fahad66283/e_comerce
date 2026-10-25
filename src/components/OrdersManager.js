@@ -182,7 +182,7 @@ export default function OrdersManager({ orders, onChange, compact = false, limit
                             {o.notes && <p className="mt-1 text-grey-700">📝 {o.notes}</p>}
                             {o.payment.reference && (
                               <p className="mt-2">
-                                <span className="font-extrabold">Transaction ID:</span> {o.payment.reference}
+                                <span className="font-extrabold">{o.payment.method === "stripe" ? "Stripe payment ID" : "Transaction ID"}:</span> {o.payment.reference}
                               </p>
                             )}
                             <p className="mt-2 font-extrabold">History</p>

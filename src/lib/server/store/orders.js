@@ -6,6 +6,7 @@ import { ORDER_STATUSES, PAYMENT_STATUSES } from "@/lib/format";
 import { ApiError, email, number, text } from "../api";
 import { isStaff } from "../auth";
 import { query, queryOne, transaction } from "../db";
+import { stripeConfig } from "../stripe";
 import { getSiteSettings } from "./settings";
 
 
@@ -86,7 +87,10 @@ export async function placeOrder(input, user) {
   if (wanted.size === 0) throw new ApiError(400, "Your cart is empty.");
 
   const settings = await getSiteSettings();
-  const method = settings.payments.methods.find((m) => m.enabled && m.id === input.payment?.method);
+  const method =
+    input.payment?.method === "stripe"
+      ? stripeConfig() && settings.payments.stripeEnabled && { id: "stripe", title: settings.payments.stripeTitle || "Credit / Debit Card", details: [] }
+      : settings.payments.methods.find((m) => m.enabled && m.id === input.payment?.method);
   if (!method) throw new ApiError(400, "Please choose a payment method.");
   const reference = method.details?.length
     ? text(input.payment?.reference, "Transaction ID", { min: 4, max: 120 })
@@ -144,7 +148,7 @@ export async function placeOrder(input, user) {
       await tx.query("UPDATE products SET stock = stock - ? WHERE id = ?", [l.quantity, l.product.id]);
     }
     await tx.query("INSERT INTO order_status_history (order_id, status) VALUES (?, 'Processing')", [result.insertId]);
-    return { id: orderNumber, key: accessKey };
+    return { id: orderNumber, key: accessKey, method: method.id };
   });
 }
 

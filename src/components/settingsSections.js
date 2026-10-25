@@ -155,6 +155,14 @@ export const SECTIONS = [
         fields: [text("value", "Value"), text("label", "Label")],
         newItem: { value: "", label: "" },
       },
+      { name: "showMap", label: "Show Google Map", type: "toggle" },
+      text("mapTitle", "Map heading"),
+      text("mapAddress", "Address (shown under the map)"),
+      area("mapLocation", "Exact map location (optional)", {
+        rows: 2,
+        placeholder: "e.g. 31.5204, 74.3587",
+        hint: "Leave empty to show the address above. For an exact pin: in Google Maps open your place → Share → Embed a map → Copy HTML, and paste it here. Coordinates like 31.5204, 74.3587 also work.",
+      }),
     ],
   },
   {
@@ -263,6 +271,9 @@ export const SECTIONS = [
           },
         ],
       },
+      { name: "stripeEnabled", label: "Show card payments (Stripe) at checkout", type: "toggle" },
+      text("stripeTitle", "Card payment name"),
+      text("stripeText", "Card payment description"),
     ],
   },
   {

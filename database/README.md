@@ -6,7 +6,8 @@ The whole website reads and writes these tables on **Hostinger** (or any MySQL 8
 database/
 ├── migrations/
 │   ├── 001_initial_schema.sql   ← the 16 store tables
-│   └── 002_server_features.sql  ← photos (images), login sessions, order access keys
+│   ├── 002_server_features.sql  ← photos (images), login sessions, order access keys
+│   └── 003_stripe_payments.sql  ← Stripe card payments (orders.stripe_session_id)
 └── seeds/
     └── 001_default_data.sql     ← default categories, products, coupons, website content, staff accounts
 ```
@@ -35,7 +36,8 @@ Check the connection at `/api/health`.
 Use this if the database user isn't allowed to create tables, or to restore a backup.
 
 1. Click **Enter phpMyAdmin** next to the database in hPanel.
-2. **Import** `migrations/001_initial_schema.sql`, then `migrations/002_server_features.sql`.
+2. **Import** the files in `migrations/` in order: `001_initial_schema.sql`, `002_server_features.sql`,
+   `003_stripe_payments.sql`.
 3. Import the data – choose **one**:
    - `seeds/001_default_data.sql` for a fresh store with the default products and content, **or**
    - a backup: **Dashboard → Backup → Download backup (.sql)**. It contains everything: products,
@@ -59,7 +61,7 @@ Use this if the database user isn't allowed to create tables, or to restore a ba
 | `products` | Products, price, sale price (`compare_at_price`), stock, featured/new flags |
 | `product_images` | Up to 5 photos per product (`sort_order` 0 = main photo) |
 | `coupons` | Discount codes (percent or fixed, minimum order, active) |
-| `orders` | Orders incl. guest checkout, totals, coupon, status, payment method/status/transaction ID |
+| `orders` | Orders incl. guest checkout, totals, coupon, status, payment method/status/transaction ID, Stripe session |
 | `order_items` | Items in each order (name and price copied at the time of purchase) |
 | `order_status_history` | Every status change, for order tracking |
 | `reviews` | Product reviews and ratings (verified buyer flag) |

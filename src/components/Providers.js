@@ -10,7 +10,7 @@ import { WishlistProvider } from "@/context/WishlistContext";
 // Hands the data loaded from MySQL (see src/lib/server/storeData.js) to the whole site.
 export default function Providers({ data, children }) {
   return (
-    <SettingsProvider saved={data.settings}>
+    <SettingsProvider saved={data.settings} stripe={data.stripe}>
       <AuthProvider user={data.user} admin={data.admin}>
         <ProductsProvider products={data.products} categories={data.categories}>
           <CartProvider>

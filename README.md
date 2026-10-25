@@ -70,7 +70,8 @@ Old addresses `/admin` and `/register` redirect to `/dashboard` and `/signup`.
 - **Reviews & ratings**: star reviews on product pages, rating breakdown, "Verified buyer" badge
 - **Guest checkout**: no account needed; logged-in customers get their details filled in
 - **Payments**: Cash on Delivery, Bank Transfer, JazzCash and Easypaisa (customer enters the transaction ID,
-  admin verifies and marks it paid). Card payments need an online payment gateway and a backend.
+  admin verifies and marks it paid), and **credit/debit cards with Stripe** (see below)
+- **Google Map** of your shop on the About Us page, editable by the super admin
 - **Unique order IDs** like `HAK-261021-7K3Q` (date + random code)
 - **Order tracking** at `/track-order` with order ID + email or phone, and a status timeline
 - **Discounts**: sale prices per product ("Original price") and coupon codes (e.g. `WELCOME10`, `SAVE500`)
@@ -95,6 +96,8 @@ Old addresses `/admin` and `/register` redirect to `/dashboard` and `/signup`.
 Log in as super admin → **Dashboard → Settings**:
 - **Contact & WhatsApp:** your WhatsApp number (international format, digits only, e.g. `923001234567`), phone, email, address
 - **Payment Methods:** your bank, JazzCash and Easypaisa account details
+
+And **Dashboard → Website → About Us** → map address / exact location of your shop.
 
 > The policy pages (privacy, terms, returns) are starting templates. Review them, ideally with a
 > legal advisor, before launching.
@@ -129,10 +132,10 @@ wishlist and any guest orders placed in that browser are added to their account)
 
 - **Branding:** store name, tagline, logo upload (header + footer), brand and dark colours
 - **Announcement bar**, **Home page** (hero, sections, promo cards, features, newsletter),
-  **Shop & Categories** headings, **Product page** highlights, **About Us**, **FAQs**,
+  **Shop & Categories** headings, **Product page** highlights, **About Us** (incl. the Google Map), **FAQs**,
   **Privacy Policy**, **Terms & Conditions**, **Return Policy**, **Footer** (text + social links)
 - **Contact & WhatsApp**, **Shipping** (fee, free-shipping threshold), **Payment methods**
-  (switch on/off, account details), **Stock alerts** (low-stock threshold)
+  (switch on/off, account details, card payments), **Stock alerts** (low-stock threshold)
 
 Long text supports `**bold**`, `[links](/page)` and `- ` bullets. Write `{storeName}` to insert the store name.
 Default content lives in `src/data/siteContent.js`.
@@ -140,6 +143,50 @@ Default content lives in `src/data/siteContent.js`.
 **Dashboard → Users:** add admins or customers, change roles, disable accounts, set passwords.
 **Dashboard → Backup:** download the whole database as a `.sql` file (restore it in phpMyAdmin), and copy
 data saved in a browser by the old browser-only version of the site into MySQL.
+
+## Google Map (About Us)
+
+**Dashboard → Website → About Us** has the map settings, and changes are live straight away:
+
+- **Show Google Map** – switch the map on or off
+- **Map heading** and **Address** (shown under the map, and used for the map when no exact location is set)
+- **Exact map location** (optional) – one of:
+  - coordinates, e.g. `31.5204, 74.3587` (in Google Maps, right-click your shop to copy them)
+  - the embed code: Google Maps → your place → **Share → Embed a map → Copy HTML**, then paste it as it is
+  - a `google.com/maps/place/...` link
+
+No Google API key is needed. Only google.com map addresses are ever shown, whatever is pasted.
+
+## Card Payments (Stripe)
+
+Customers can pay by credit/debit card on Stripe's secure payment page (Stripe Checkout). Card details
+never touch this website.
+
+**Set up**
+1. Create an account at [stripe.com](https://stripe.com) (Stripe must support the country your
+   business is registered in).
+2. **Stripe Dashboard → Developers → API keys:** copy the **Secret key** into `.env` (or Hostinger's
+   environment variables) as `STRIPE_SECRET_KEY`. Start with the test key (`sk_test_...`) and switch to
+   the live key (`sk_live_...`) when you're ready. The publishable key isn't needed.
+3. **Developers → Webhooks → Add endpoint:** `https://your-domain.com/api/stripe/webhook` with the events
+   `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`
+   and `checkout.session.async_payment_failed`. Copy its **Signing secret** into `STRIPE_WEBHOOK_SECRET`.
+4. Set `SITE_URL=https://your-domain.com` and, if your prices aren't in Pakistani rupees, `STRIPE_CURRENCY`
+   (default `pkr`; amounts are charged as they are, not converted).
+5. Restart / redeploy. **Card payments now show at checkout.** **Dashboard → Settings → Payment Methods**
+   shows whether Stripe is connected (and in test mode), and lets you switch cards off or rename them.
+
+**How it works**
+- The order is saved first (stock reserved, payment *Pending*), then the customer is sent to Stripe for the
+  order total (one line: products, discount and shipping included).
+- After paying, the confirmation page checks the payment with Stripe and marks the order **Paid**, with the
+  Stripe payment ID on the order. The webhook does the same even if the customer closes the page.
+- If the customer cancels on Stripe's page, the order is cancelled, the stock is put back and their cart is
+  still there. Unpaid payment pages expire after 1 hour and the order is cancelled the same way.
+- Opening **Dashboard → Orders** also checks recent unpaid card orders with Stripe, in case a webhook was missed.
+- Refunds: make them in the Stripe Dashboard, then set the order's payment status to *Refunded*.
+
+Test it with Stripe's test card `4242 4242 4242 4242`, any future date and any CVC.
 
 ## Product Photos
 
@@ -158,7 +205,8 @@ The site needs a plan that runs **Node.js web apps** (Business Web Hosting, Clou
    when the database is on the same Hostinger account).
 3. Open your Node.js web app's deployment settings (or **Environment variables** in the website
    dashboard), choose to **import a `.env` file** and pick your `.env`, or add the five
-   `DB_...` variables one by one. Hostinger keeps them for every later deploy.
+   `DB_...` variables (and the `STRIPE_...` / `SITE_URL` ones for card payments) one by one.
+   Hostinger keeps them for every later deploy.
 4. Deploy (build command `npm run build`, start command `npm start`), then open
    `https://your-domain/api/health`. The first visit creates the tables and default data.
 5. Log in as the super admin and **change the default passwords** (My Account → Password).
@@ -228,6 +276,6 @@ products from `src/data/products.js` (orders keep their item names and prices).
 
 ## Next Steps
 
-- Add an online payment gateway (e.g. JazzCash, Easypaisa, PayFast)
+- Automatic JazzCash / Easypaisa payments (their merchant APIs)
 - Send order confirmation and status emails
 - Email verification and "forgot password" for customers

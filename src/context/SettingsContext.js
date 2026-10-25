@@ -10,7 +10,7 @@ const SettingsContext = createContext(null);
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
-export function SettingsProvider({ saved, children }) {
+export function SettingsProvider({ saved, stripe, children }) {
   const router = useRouter();
   // rawSettings keep "{storeName}" placeholders (for the editor); settings have them filled in.
   const rawSettings = useMemo(() => mergeSettings(defaultSettings, saved ?? {}), [saved]);
@@ -27,7 +27,7 @@ export function SettingsProvider({ saved, children }) {
   }
 
   return (
-    <SettingsContext.Provider value={{ settings, rawSettings, saveSection, resetSection }}>
+    <SettingsContext.Provider value={{ settings, rawSettings, saveSection, resetSection, stripe }}>
       <ThemeColors general={settings.general} />
       <StoreNameInTitle name={settings.general.storeName} />
       {children}
@@ -74,8 +74,10 @@ export function useSettings() {
   return context;
 }
 
-// Payment methods switched on by the super admin.
+// Payment methods switched on by the super admin, plus card payments when Stripe is set up in .env.
 export function usePaymentMethods() {
-  const { settings } = useContext(SettingsContext);
-  return settings.payments.methods.filter((m) => m.enabled);
+  const { settings, stripe } = useContext(SettingsContext);
+  const { methods, stripeEnabled, stripeTitle, stripeText } = settings.payments;
+  const card = stripe?.ready && stripeEnabled ? [{ id: "stripe", title: stripeTitle, text: stripeText, details: [] }] : [];
+  return [...methods.filter((m) => m.enabled), ...card];
 }
