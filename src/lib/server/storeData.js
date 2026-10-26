@@ -1,5 +1,6 @@
 import "server-only";
 import { getCurrentUser, isStaff } from "./auth";
+import { stripeStatus } from "./stripe";
 import { listCategories, listProducts } from "./store/catalog";
 import { countUnreadMessages } from "./store/messages";
 import { countPendingOrders } from "./store/orders";
@@ -28,5 +29,6 @@ export async function loadStoreData() {
     ratings,
     wishlist,
     admin: staff ? { pendingOrders, unreadMessages } : null,
+    stripe: stripeStatus(),
   };
 }

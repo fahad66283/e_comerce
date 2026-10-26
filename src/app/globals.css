@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* The mobile app (React Native) doesn't use these styles. */
+@source not "../../mobile";
 
 /* HAK Store theme – black + green, Tajawal font */
 @theme inline {

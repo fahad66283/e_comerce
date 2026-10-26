@@ -77,6 +77,10 @@ export const defaultSettings = {
         ],
       },
     ],
+    // Card payments with Stripe (shown only when STRIPE_SECRET_KEY is set in .env).
+    stripeEnabled: true,
+    stripeTitle: "Credit / Debit Card",
+    stripeText: "Pay securely by card – powered by Stripe",
   },
 
   home: {
@@ -150,6 +154,10 @@ export const defaultSettings = {
       { value: "6 days", label: "Support Every Week" },
       { value: "7", label: "Days to Return" },
     ],
+    showMap: true,
+    mapTitle: "Visit us",
+    mapAddress: "Lahore, Pakistan",
+    mapLocation: "",
   },
 
   faqs: {
@@ -297,7 +305,7 @@ export function applyStoreName(value, name) {
   return value;
 }
 
-export const PAYMENT_ICONS = { cod: "💵", bank: "🏦", jazzcash: "📱", easypaisa: "📲", card: "💳" };
+export const PAYMENT_ICONS = { cod: "💵", bank: "🏦", jazzcash: "📱", easypaisa: "📲", card: "💳", stripe: "💳" };
 
 export function whatsappLink(number, message) {
   return `https://wa.me/${String(number).replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;

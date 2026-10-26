@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useSettings } from "@/context/SettingsContext";
+import { mapDirectionsUrl, mapEmbedUrl } from "@/lib/maps";
 import RichText from "./RichText";
 
 export default function AboutContent() {
   const { about } = useSettings().settings;
+  const mapSrc = about.showMap ? mapEmbedUrl(about.mapLocation, about.mapAddress) : null;
+  const directions = mapDirectionsUrl(about.mapLocation, about.mapAddress);
 
   return (
     <div className="container-page py-16">
@@ -50,6 +53,31 @@ export default function AboutContent() {
           </div>
         )}
       </div>
+
+      {mapSrc && (
+        <section className="mt-16">
+          <h2 className="section-title">{about.mapTitle}</h2>
+          <div className="mt-5 overflow-hidden rounded-panel border-[1.5px] border-grey-200 bg-grey-100">
+            <iframe
+              key={mapSrc}
+              src={mapSrc}
+              title={`Map: ${about.mapAddress || about.mapTitle}`}
+              className="block h-[300px] w-full sm:h-[400px]"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
+            />
+          </div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            {about.mapAddress && <p className="font-bold">📍 {about.mapAddress}</p>}
+            {directions && (
+              <a href={directions} target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-sm">
+                Get directions ↗
+              </a>
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

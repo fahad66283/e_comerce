@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { formatPrice } from "@/data/products";
-import { usePaymentMethods } from "@/context/SettingsContext";
+import { usePaymentMethods, useSettings } from "@/context/SettingsContext";
 import { PAYMENT_ICONS } from "@/data/siteContent";
 import OrderSummary from "@/components/OrderSummary";
 import { api } from "@/lib/api";
@@ -25,11 +25,29 @@ export default function CheckoutPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [method, setMethod] = useState("cod");
-  const [placing, setPlacing] = useState(false);
+  const [placing, setPlacing] = useState(""); // message while leaving the page
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const methods = usePaymentMethods();
+  const { stripe } = useSettings();
+
+  // Back from Stripe without paying (cancel link): cancel that order and keep the cart.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("cancelled");
+    if (!id) return;
+    router.replace("/checkout");
+    api(`/api/orders/${encodeURIComponent(id)}/cancel`, { method: "POST", body: { key: params.get("key") } })
+      .then(({ status }) =>
+        status === "paid"
+          ? router.push(`/order-confirmation?id=${encodeURIComponent(id)}&key=${params.get("key")}`)
+          : setNotice("Card payment was cancelled, so your order wasn't placed. Your cart is still here.")
+      )
+      .catch(() => setNotice("Card payment was cancelled. Your cart is still here."));
+  }, [router]);
+
   // Falls back to the first enabled method if the chosen one was switched off.
   const selected = methods.find((m) => m.id === method) ?? methods[0];
   const isManual = selected?.details.length > 0;
@@ -67,7 +85,13 @@ export default function CheckoutPage() {
         },
       });
       if (!user) rememberGuestOrder(order.id, order.key);
-      setPlacing(true);
+      if (order.redirect) {
+        // Card payment: pay on Stripe's secure page. The cart is cleared once payment succeeds.
+        setPlacing("Taking you to secure card payment...");
+        window.location.assign(order.redirect);
+        return;
+      }
+      setPlacing("Placing your order...");
       clearCart();
       router.push(`/order-confirmation?id=${encodeURIComponent(order.id)}&key=${order.key}`);
       router.refresh(); // stock levels changed
@@ -78,7 +102,7 @@ export default function CheckoutPage() {
   }
 
   if (placing) {
-    return <p className="container-page py-16 text-grey-500">Placing your order...</p>;
+    return <p className="container-page py-16 text-grey-500">{placing}</p>;
   }
 
   if (!loaded) {
@@ -102,6 +126,12 @@ export default function CheckoutPage() {
         <span className="eyebrow">Checkout</span>
         <h1 className="section-title">Shipping &amp; payment details</h1>
       </div>
+
+      {notice && (
+        <p role="status" className="mb-6 rounded-field bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+          {notice}
+        </p>
+      )}
 
       <form onSubmit={handleSubmit} className="grid items-start gap-9 lg:grid-cols-[1fr_370px]">
         <div className="grid gap-5">
@@ -146,7 +176,7 @@ export default function CheckoutPage() {
           <section className="panel">
             <h3 className="mb-4 text-[1.05rem]">Payment Method</h3>
             <div className="grid gap-2.5">
-              {[...methods, { id: "card", title: "Credit / Debit Card", text: "Coming soon", disabled: true }].map((opt) => (
+              {(stripe?.ready ? methods : [...methods, { id: "card", title: "Credit / Debit Card", text: "Coming soon", disabled: true }]).map((opt) => (
                 <label
                   key={opt.id}
                   className={`flex items-center gap-3.5 rounded-field border-[1.5px] border-grey-200 px-[15px] py-[13px] transition has-[:checked]:border-ink has-[:checked]:bg-grey-50 ${
@@ -203,7 +233,7 @@ export default function CheckoutPage() {
             </p>
           )}
           <button type="submit" disabled={submitting} className="btn btn-primary mt-[18px] w-full">
-            {submitting ? "Placing order..." : "Place Order"}
+            {submitting ? "Placing order..." : selected?.id === "stripe" ? `Pay ${formatPrice(total)} by Card` : "Place Order"}
           </button>
           <p className="mt-3 text-center text-xs text-grey-400">
             By placing your order you agree to our{" "}
